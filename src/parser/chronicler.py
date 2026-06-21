@@ -17,8 +17,9 @@ from typing import Any, Optional
 
 from . import format as fmt
 from . import names
+from . import characters
 
-SCHEMA_VERSION = "chronicler.v1"
+SCHEMA_VERSION = "chronicler.v1.1"
 
 
 class SaveParseError(Exception):
@@ -144,9 +145,13 @@ def _parse_achievements(data: bytes, chunk: Chunk, facts: ChroniclerFacts) -> No
              "unlock": names.achievement_unlock(i)}
             for i in real_locked
         ],
+        # Non-tainted character roster, derived from unlock achievements.
+        "characters": characters.roster(set(unlocked_idx)),
     }
     facts.note_unknown("completion.completion_marks",
-                       "per-character mark mapping not implemented in v1")
+                       "per-character mark mapping not implemented in v1.1")
+    facts.note_unknown("completion.characters.tainted",
+                       "tainted-character unlocks have no achievement; not trackable")
     facts.raw["achievements_locked_indices"] = locked
 
 

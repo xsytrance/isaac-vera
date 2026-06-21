@@ -43,6 +43,13 @@ def render(facts: dict) -> str:
     L.append("## Completion")
     L.append(f"Achievements  {unlocked} / {total}  ({prog*100:.1f}%)   Dead God: {dead}")
     L.append(f"{_bar(prog)}  {prog*100:.1f}%")
+    chars = comp.get("characters")
+    if chars:
+        locked = chars.get("locked") or []
+        L.append(f"Characters: {chars.get('unlocked_count')}/{chars.get('tracked_total')}"
+                 " non-tainted unlocked"
+                 + (f" — still locked: {', '.join(locked)}" if locked else " (all!)"))
+        L.append("(tainted characters not tracked from save data)")
     L.append("")
 
     # Lifetime stats

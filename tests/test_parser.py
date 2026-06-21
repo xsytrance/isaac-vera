@@ -77,7 +77,7 @@ def build_synthetic_save() -> bytes:
 
 def test_header_and_schema():
     facts = parse_bytes(build_synthetic_save(), "synthetic.dat")
-    assert facts.schema == SCHEMA_VERSION == "chronicler.v1"
+    assert facts.schema == SCHEMA_VERSION == "chronicler.v1.1"
     assert facts.source["header_magic"] == "ISAACNGSAVE09R"
     assert facts.source["game"] == "Repentance"
     assert facts.source["format_verified"] is True
@@ -111,6 +111,19 @@ def test_dead_god_completion():
     assert c["achievements_unlocked"] == 9   # all but the null slot
     assert c["dead_god"] is True
     assert c["completion_marks"] is None      # honest null
+
+
+def test_character_roster():
+    facts = parse_bytes(build_synthetic_save(), "synthetic.dat")
+    chars = facts.completion["characters"]
+    # Synthetic save unlocks achievements 1..9 -> Magdalene(1), Cain(2), Judas(3),
+    # plus Isaac (default). The rest stay locked.
+    assert chars["tracked_total"] == 17
+    assert chars["unlocked_count"] == 4
+    assert set(chars["unlocked"]) == {"Isaac", "Magdalene", "Cain", "Judas"}
+    assert "Keeper" in chars["locked"] and "Bethany" in chars["locked"]
+    # 17 tainted characters are not derivable from achievements -> honest null.
+    assert chars["tainted"] is None
 
 
 def test_collectibles_counts():

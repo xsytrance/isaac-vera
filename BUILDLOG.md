@@ -1,5 +1,19 @@
 # BUILDLOG
 
+## v1.1.x — character roster — 2026-06-21
+
+Deepened the Chronicler (schema bump `chronicler.v1` → `chronicler.v1.1`):
+- `completion.characters` — the **17 non-tainted characters**, each resolved
+  from its unlock achievement (verified by id: Magdalene=1 … Bethany=404,
+  Jacob & Esau=405; Isaac=default). Surfaced in the Report and Vera's truth block.
+- The **17 tainted** characters unlock via Knife Pieces / Red Key with no
+  per-character achievement, so they are **not derivable** from this data →
+  reported as `null` ("not tracked"), never guessed.
+- On the real save: 11/17 non-tainted unlocked (locked: The Lost, Keeper,
+  Apollyon, The Forgotten, Bethany, Jacob & Esau). Tests: 31 passed, 1 skipped.
+- Bestiary monster names and per-character completion marks remain honest nulls
+  (no clean public source yet — documented in the roadmap backlog).
+
 ## v1.2 — prime-as-brain service — 2026-06-21
 
 Unified the pieces into one read-only service (`src/server/app.py`) so a single

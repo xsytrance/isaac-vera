@@ -13,7 +13,7 @@ from src.companion.ollama_client import OllamaClient, OllamaError
 
 # A representative facts dict (shape matches chronicler.v1).
 FACTS = {
-    "schema": "chronicler.v1",
+    "schema": "chronicler.v1.1",
     "source": {"name": "rep+persistentgamedata1.dat", "game": "Repentance",
                "format_verified": True},
     "completion": {

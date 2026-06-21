@@ -32,12 +32,12 @@ def _state(client=None):
 def test_healthz():
     status, payload = route("GET", "/healthz", b"", _state())
     assert status == 200 and payload["ok"] is True
-    assert payload["schema"] == "chronicler.v1" and payload["model"] == "prime"
+    assert payload["schema"] == "chronicler.v1.1" and payload["model"] == "prime"
 
 
 def test_facts_endpoint():
     status, payload = route("GET", "/facts", b"", _state())
-    assert status == 200 and payload["schema"] == "chronicler.v1"
+    assert status == 200 and payload["schema"] == "chronicler.v1.1"
 
 
 def test_report_endpoint_is_text():
