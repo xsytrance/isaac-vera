@@ -1,5 +1,13 @@
 # BUILDLOG
 
+## collectibles search/filter — 2026-06-21
+
+SPA Collectibles panel gains a name search box + All / to-find / seen filter.
+Typing shows a two-column named list of matches (got vs missing); empty query
+shows the filtered dot grid. Makes the 334 missing items actually findable.
+Client-side only (data already in /facts). Mobile: single-column list. Rebuilds
+clean; 38 tests still green.
+
 ## collectibles grid — chronicler.v1.3 — 2026-06-21
 
 `collectibles.items` now lists every real collectible (`{id, name, seen}` — known
