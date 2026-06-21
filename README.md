@@ -44,6 +44,31 @@ curl localhost:8765/slots
 curl -X POST localhost:8765/ask -d '{"question":"how close am I to Dead God?"}'
 ```
 
+### Over Tailscale (one port, every device)
+
+Everything — dashboard **and** Vera chat — is served on a single port. Your
+browser only ever talks to this server; it reaches Ollama server-side, so your
+devices never need Ollama's port. One helper:
+
+```bash
+scripts/serve.sh ~/isaac-save/250900/remote/        # serves on 0.0.0.0:8765
+#   any tailnet device:  http://<that-machine-tailnet-ip>:8765/
+```
+
+For a clean HTTPS URL with no port number, let Tailscale proxy it:
+
+```bash
+tailscale serve --bg 8765        # -> https://<host>.<tailnet>.ts.net/
+```
+
+Keep it on the tailnet — **don't** `tailscale funnel` it (that would expose your
+save data to the public internet). For the Vera chat, point at your model:
+
+```bash
+OLLAMA_HOST=http://<prime-tailnet-ip>:11434 OLLAMA_MODEL=<model> \
+  scripts/serve.sh ~/isaac-save/250900/remote/
+```
+
 ### Frontend
 
 Two options, both talking to the same server:
