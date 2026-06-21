@@ -9,15 +9,19 @@ This is **Spine 1** of the two-spine plan (see `MULTIVERA_ROADMAP.md`). Spine 2
 (the Commentator — a REPENTOGON live run feed, commentary, cinematics) is **not**
 built here.
 
-## Scope (v1)
+## Scope (chronicler.v1.2)
 - ✅ Parse Repentance / Repentance+ (`ISAACNGSAVE09R`) saves into facts.
-- ✅ Completion (achievements / Dead God), lifetime stats (deaths, kills, rocks,
-  donation, eden tokens, win streak), collectibles seen, bestiary counts.
-- ✅ **ID → name resolution** for achievements & collectibles; `locked`
-  achievements carry in-game unlock hints. Unknown id → `Unknown_<id>`.
-- ✅ **Save Report** (`--report`): human-readable progress + what's left.
+- ✅ Completion (achievements / Dead God), lifetime stats, collectibles, bestiary.
+- ✅ **ID → name resolution** for achievements, collectibles, and **bestiary
+  monsters** (with boss flags); `locked` achievements carry unlock hints.
+  Unknown id → `Unknown_<id>`.
+- ✅ **Character roster** (17 non-tainted, from unlock achievements).
+- ✅ **Bestiary** named per category (deaths / kills / hits / encounters) —
+  "most killed / encountered / killed you most".
+- ✅ **Save Report** (`--report`) and **Vera** (grounded companion).
 - ✅ Strictly read-only. No save editing, ever.
-- ❌ No LLM companion yet (next), no live feed (Spine 2).
+- ⬜ Honest nulls: per-character completion marks, tainted unlocks, Greed-donation
+  split (see roadmap).
 
 ## Usage
 ```bash

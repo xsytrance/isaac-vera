@@ -19,7 +19,7 @@ from . import format as fmt
 from . import names
 from . import characters
 
-SCHEMA_VERSION = "chronicler.v1.1"
+SCHEMA_VERSION = "chronicler.v1.2"
 
 
 class SaveParseError(Exception):
@@ -179,43 +179,59 @@ def _parse_bestiary(data: bytes, chunk: Chunk, facts: ChroniclerFacts) -> None:
                             f"pair region not 8-aligned (got {region} bytes)")
         return
 
-    categories: list[dict] = []
-    cur_count = 0
-    cur_value_sum = 0
-    prev_entity = -1
+    # Split the pair stream into categories at each entity-key reset.
+    cats: list[list[tuple[int, int]]] = [[]]
+    prev_key = -1
     o = pairs_start
     end = len(data) - fmt.FOOTER_SIZE
     total = 0
     while o + 8 <= end:
-        entity = _u32(data, o)
+        key = _u32(data, o)
         value = _u32(data, o + 4)
-        if entity < prev_entity:
-            categories.append({"entries": cur_count, "value_sum": cur_value_sum})
-            cur_count = 0
-            cur_value_sum = 0
-        prev_entity = entity
-        cur_count += 1
-        cur_value_sum += value
+        if key < prev_key:
+            cats.append([])
+        cats[-1].append((key, value))
+        prev_key = key
         total += 1
         o += 8
-    categories.append({"entries": cur_count, "value_sum": cur_value_sum})
+
+    labels = fmt.BESTIARY_CATEGORIES  # deaths, kills, hits, encounters (file order)
+    out_categories = []
+    for i, cat in enumerate(cats):
+        top = []
+        for key, value in sorted(cat, key=lambda kv: -kv[1])[:10]:
+            eid, variant = fmt.bestiary_entity(key)
+            top.append({
+                "id": eid, "variant": variant,
+                "name": names.entity_name(eid, variant),
+                "boss": names.entity_is_boss(eid, variant),
+                "value": value,
+            })
+        out_categories.append({
+            "label": labels[i] if i < len(labels) else None,
+            "entries": len(cat),
+            "value_sum": sum(v for _, v in cat),
+            "top": top,
+        })
 
     facts.bestiary = {
         "present": True,
         "parsed": True,
-        "category_count": len(categories),
-        "categories": categories,
+        "category_count": len(cats),
+        "category_labels": [c["label"] for c in out_categories],
+        "categories": out_categories,
         "total_entries": total,
-        # Which category is kills / encounters / hits / deaths is NOT confirmed,
-        # and entity-key -> monster-name mapping is deferred. Honest nulls:
-        "category_labels": None,
     }
-    facts.note_unknown("bestiary.category_labels",
-                       "kill/encounter/hit/death labelling unconfirmed in v1")
-    if len(categories) != chunk.count:
+    if len(cats) != chunk.count:
         facts.note_unknown(
             "bestiary.category_count",
-            f"detected {len(categories)} categories but chunk count={chunk.count}",
+            f"detected {len(cats)} categories but chunk count={chunk.count}",
+        )
+    if len(cats) != len(labels):
+        # Category->label alignment only holds for the standard 4-category layout.
+        facts.note_unknown(
+            "bestiary.category_labels",
+            f"expected {len(labels)} categories, found {len(cats)}; labels may be off",
         )
 
 

@@ -1,5 +1,23 @@
 # BUILDLOG
 
+## v1.2 — bestiary names + category labels — 2026-06-21
+
+Resolved two long-standing nulls at once, both sourced and validated:
+- **Category labels** = `deaths, kills, hits, encounters` (file order from
+  Demorck `SaveManager.ts` `setBestiary`; corroborated by magnitudes — kills &
+  encounters dominate, deaths smallest).
+- **Monster names**: entity key decode `id = ((id2<<8)|id1) >> 4`,
+  `variant = byte+1` (Demorck), i.e. `id = (key>>20)&0xFFF`. Verified
+  `0x00A00000 → id 10 (Frowning Gaper)`; **99% of real-save entries resolve**
+  (735/739). Vendored 498 names + 134 boss flags (`data/entities.json`) from
+  Demorck `IEntity.ts`. Unknown → `Unknown_<id>.<variant>`.
+- Facts now expose, per category: `label`, `entries`, `value_sum`, and a named
+  `top` list (id/variant/name/boss/value). Report + Vera show "most killed /
+  encountered / killed you most". On the real save: most killed Spider (1,417),
+  Attack Fly (1,363); killed you most Spider, Gusher, Maw.
+- Schema → `chronicler.v1.2`; tests reference the constant now (no churn on
+  future bumps). 31 passed, 1 skipped.
+
 ## v1.1.x — character roster — 2026-06-21
 
 Deepened the Chronicler (schema bump `chronicler.v1` → `chronicler.v1.1`):

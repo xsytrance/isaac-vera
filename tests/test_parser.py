@@ -60,11 +60,12 @@ def build_synthetic_save() -> bytes:
     out += _chunk(fmt.GAME_SETTINGS, 2, struct.pack("<II", 0, 0))
     out += _chunk(fmt.SPECIAL_SEEDS, 2, bytes([0, 0]))
 
-    # BESTIARY: 2 categories (entity ascending, resets between categories).
-    # 8-byte sub-header + pairs. count field = number of categories.
+    # BESTIARY: 2 categories (entity keys ascending, reset between categories).
+    # Keys decode (id = (key>>20)&0xFFF): 0x00A00000 -> id 10 (Gaper),
+    # 0x00D00000 -> id 13 (Fly). 8-byte sub-header + pairs.
     bestiary_pairs = b""
     for cat in range(2):
-        for ent, val in [(0x00100000, 3 + cat), (0x00200000, 5 + cat)]:
+        for ent, val in [(0x00A00000, 3 + cat), (0x00D00000, 5 + cat)]:
             bestiary_pairs += struct.pack("<II", ent, val)
     bestiary_body = struct.pack("<II", 2, 99) + bestiary_pairs  # 8-byte sub-header
     out += struct.pack("<III", fmt.BESTIARY, len(bestiary_body), 2) + bestiary_body
@@ -77,7 +78,8 @@ def build_synthetic_save() -> bytes:
 
 def test_header_and_schema():
     facts = parse_bytes(build_synthetic_save(), "synthetic.dat")
-    assert facts.schema == SCHEMA_VERSION == "chronicler.v1.1"
+    assert facts.schema == SCHEMA_VERSION
+    assert SCHEMA_VERSION.startswith("chronicler.v")
     assert facts.source["header_magic"] == "ISAACNGSAVE09R"
     assert facts.source["game"] == "Repentance"
     assert facts.source["format_verified"] is True
@@ -132,13 +134,18 @@ def test_collectibles_counts():
     assert facts.collectibles["seen"] == 3
 
 
-def test_bestiary_categories():
+def test_bestiary_categories_and_names():
     facts = parse_bytes(build_synthetic_save(), "synthetic.dat")
     b = facts.bestiary
     assert b["parsed"] is True
     assert b["category_count"] == 2
     assert b["total_entries"] == 4
-    assert b["category_labels"] is None       # honest null
+    # Labels come from the sourced file order (first 2 of deaths/kills/hits/enc).
+    assert b["category_labels"] == ["deaths", "kills"]
+    # Entity keys decode to real monster names: id 10 variant 0 = "Frowning
+    # Gaper" (variant 1 would be "Gaper"), id 13 variant 0 = "Fly".
+    top_names = {t["name"] for c in b["categories"] for t in c["top"]}
+    assert "Frowning Gaper" in top_names and "Fly" in top_names
 
 
 def test_unknowns_are_logged_not_guessed():

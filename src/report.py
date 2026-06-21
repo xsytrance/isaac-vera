@@ -73,13 +73,25 @@ def render(facts: dict) -> str:
     L.append(f"Seen {cseen} / {ctot}  ({cfrac*100:.0f}%)   {_bar(cfrac)}")
     L.append("")
 
-    # Bestiary
+    # Bestiary — named highlights per category.
     if best.get("parsed"):
-        cats = best.get("categories", [])
-        sums = " / ".join(str(c.get("value_sum", 0)) for c in cats)
+        cats = {c.get("label"): c for c in best.get("categories", [])}
         L.append("## Bestiary")
-        L.append(f"{best.get('total_entries', 0)} entries across "
-                 f"{best.get('category_count', 0)} categories (value sums: {sums})")
+        L.append(f"{best.get('total_entries', 0)} entities tracked "
+                 f"across {best.get('category_count', 0)} categories")
+
+        def _line(label: str, verb: str) -> None:
+            c = cats.get(label)
+            if not c:
+                return
+            top = c.get("top") or []
+            names_ = ", ".join(
+                f"{t['name']} ({t['value']:,})" for t in top[:3]) or "—"
+            L.append(f"{verb}: {names_}  · total {c.get('value_sum', 0):,}")
+
+        _line("kills", "Most killed")
+        _line("encounters", "Most encountered")
+        _line("deaths", "Killed you most")
         L.append("")
 
     # What's left — sample of locked achievements with how-to-unlock hints.

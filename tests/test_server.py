@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import json
 
-from src.parser import parse_bytes
+from src.parser import parse_bytes, SCHEMA_VERSION
 from src.companion.companion import Companion
 from src.companion.ollama_client import OllamaError
 from src.report import render
@@ -32,12 +32,12 @@ def _state(client=None):
 def test_healthz():
     status, payload = route("GET", "/healthz", b"", _state())
     assert status == 200 and payload["ok"] is True
-    assert payload["schema"] == "chronicler.v1.1" and payload["model"] == "prime"
+    assert payload["schema"] == SCHEMA_VERSION and payload["model"] == "prime"
 
 
 def test_facts_endpoint():
     status, payload = route("GET", "/facts", b"", _state())
-    assert status == 200 and payload["schema"] == "chronicler.v1.1"
+    assert status == 200 and payload["schema"] == SCHEMA_VERSION
 
 
 def test_report_endpoint_is_text():

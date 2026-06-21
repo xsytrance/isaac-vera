@@ -61,8 +61,13 @@ def build_truth_block(facts: dict, max_locked: int = 60) -> str:
             + ". Tainted characters: not tracked.")
     L.append(f"Collectibles seen: {coll.get('seen')}/{coll.get('total')}")
     if best.get("parsed"):
-        L.append(f"Bestiary: {best.get('total_entries')} entries "
-                 f"({best.get('category_count')} categories)")
+        cats = {c.get("label"): c for c in best.get("categories", [])}
+        L.append(f"Bestiary: {best.get('total_entries')} entities tracked.")
+        for label, verb in (("kills", "most killed"), ("deaths", "killed you most")):
+            c = cats.get(label)
+            if c and c.get("top"):
+                hi = ", ".join(f"{t['name']} ({t['value']})" for t in c["top"][:3])
+                L.append(f"  {verb}: {hi}")
 
     locked = comp.get("locked") or []
     if locked:

@@ -28,14 +28,17 @@ deaths) → commentary / cinematics / Living Text.
   persona bones) eventually lands.
 - Gated behind Claude co-sign of Spine 1.
 
-## Near-term backlog (post co-sign)
-- Map achievement IDs → per-character hard-mode **completion marks** (currently null).
-- Map COLLECTIBLES ids → item names; expose per-item touched/seen.
-- Confirm bestiary **category labels** (kills / encounters / hits / deaths) and
-  map entity keys → monster names.
-- Disambiguate normal vs **Greed** donation machine counters.
-- Add more header versions (Afterbirth/Afterbirth+) once byte-verified.
-- Schema bump `chronicler.v0 → v1` when the above land.
+## Near-term backlog
+- ✅ Map COLLECTIBLES ids → item names (v1).
+- ✅ Character roster (17 non-tainted from unlock achievements) (v1.1).
+- ✅ Bestiary **category labels** + entity→monster names, 99% resolve (v1.2).
+- ⬜ Per-character hard-mode **completion marks** — *spiked: the marks grid does
+  not appear in the documented chunk format as a clean per-character structure;
+  likely not extractable without new reversing. Stays honest null for now.*
+- ⬜ **Tainted** character unlocks (no per-character achievement; needs another
+  signal).
+- ⬜ Disambiguate normal vs **Greed** donation machine counters.
+- ⬜ Add more header versions (Afterbirth/Afterbirth+) once byte-verified.
 
 ## Guardrails carried from fft-psx-vera
 - Unknown = `null`, logged, never guessed.

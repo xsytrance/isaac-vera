@@ -119,8 +119,19 @@ COUNTER_OFFSETS = {
     "best_win_streak": 0x5C,
 }
 
-# Bestiary entity key encoding (entity:u32, value:u32 pairs). The key packs
-# (type << 16) | (variant << 8) | subtype. We expose counts faithfully but do
-# NOT yet map keys -> monster names, nor confirm which category is
-# kills/encounters/hits/deaths, so those labels stay None.
-BESTIARY_KEY_TYPE_SHIFT = 16
+# Bestiary: 4 categories in file order (Demorck SaveManager.ts setBestiary;
+# corroborated by magnitudes on a real save — kills & encounters dominate,
+# deaths smallest).
+BESTIARY_CATEGORIES = ["deaths", "kills", "hits", "encounters"]
+
+
+def bestiary_entity(key: int) -> tuple[int, int]:
+    """Decode a bestiary (entity:u32) key into (entity_id, variant).
+
+    Sourced from Demorck SaveManager.ts: id1=byte+2, id2=byte+3,
+    id = ((id2<<8)|id1) >> 4; variant = byte+1. Verified: key 0x00A00000 -> id 10
+    (Gaper), and a real save resolves 99% of entries to known monsters.
+    """
+    variant = (key >> 8) & 0xFF
+    entity_id = ((key >> 16) & 0xFFFF) >> 4
+    return entity_id, variant
