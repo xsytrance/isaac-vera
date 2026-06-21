@@ -130,8 +130,10 @@ def test_character_roster():
 
 def test_collectibles_counts():
     facts = parse_bytes(build_synthetic_save(), "synthetic.dat")
-    assert facts.collectibles["total"] == 5
-    assert facts.collectibles["seen"] == 3
+    coll = facts.collectibles
+    assert coll["total"] == 5
+    # Synthetic seen flags [1,0,1,1,0] -> ids 2 and 3 (id 0 null slot excluded).
+    assert coll["seen"] == 2
 
 
 def test_bestiary_categories_and_names():
@@ -170,12 +172,13 @@ def test_enriched_achievement_names():
     assert isinstance(facts.completion["locked"], list)
 
 
-def test_enriched_item_names():
+def test_enriched_item_grid():
     facts = parse_bytes(build_synthetic_save(), "synthetic.dat")
-    seen = {c["id"]: c["name"] for c in facts.collectibles["seen_items"]}
-    # Synthetic seen items at indices 0, 2, 3.
-    assert set(seen) == {0, 2, 3}
-    assert seen[2] == names.collectible_name(2) == "The Inner Eye"
+    items = {c["id"]: c for c in facts.collectibles["items"]}
+    # Full grid of real items (ids 1..4), each with name + seen flag; id 0 skipped.
+    assert set(items) == {1, 2, 3, 4}
+    assert items[2]["name"] == names.collectible_name(2) == "The Inner Eye"
+    assert items[2]["seen"] is True and items[1]["seen"] is False
 
 
 def test_unknown_ids_render_honestly():

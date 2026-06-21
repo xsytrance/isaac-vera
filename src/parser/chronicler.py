@@ -20,7 +20,7 @@ from . import names
 from . import characters
 from . import priorities
 
-SCHEMA_VERSION = "chronicler.v1.2"
+SCHEMA_VERSION = "chronicler.v1.3"
 
 
 class SaveParseError(Exception):
@@ -159,14 +159,20 @@ def _parse_achievements(data: bytes, chunk: Chunk, facts: ChroniclerFacts) -> No
 
 def _parse_collectibles(data: bytes, chunk: Chunk, facts: ChroniclerFacts) -> None:
     blob = data[chunk.data_offset:chunk.data_offset + chunk.data_len]
-    seen_idx = [i for i, b in enumerate(blob) if b != 0]
+    seen_flags = [b != 0 for b in blob]
+    seen_idx = [i for i, s in enumerate(seen_flags) if s and i != 0]  # skip null slot 0
+    # Full collectible grid (chronicler.v1.3): every real item (known id, or seen)
+    # with its name and seen flag. id 0 is the "no item" slot, skipped. Gap ids
+    # with no item and unseen are omitted (not real collectibles).
+    items = [
+        {"id": i, "name": names.collectible_name(i), "seen": seen_flags[i]}
+        for i in range(1, len(blob))
+        if names.known_collectible(i) or seen_flags[i]
+    ]
     facts.collectibles = {
         "total": chunk.count,
         "seen": len(seen_idx),
-        # Enriched (chronicler.v1): which items have been touched/seen, by name.
-        "seen_items": [
-            {"id": i, "name": names.collectible_name(i)} for i in seen_idx
-        ],
+        "items": items,
     }
 
 

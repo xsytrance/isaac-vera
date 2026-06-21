@@ -7,6 +7,7 @@ import {
   StatsGrid,
   BestiaryCard,
   WhatsNext,
+  Collectibles,
 } from "./components/Cards";
 import { VeraChat } from "./components/VeraChat";
 
@@ -89,6 +90,7 @@ export function App() {
             <BestiaryCard f={facts} />
             <WhatsNext f={facts} />
           </div>
+          <Collectibles f={facts} />
           <VeraChat slot={selected ?? undefined} />
         </>
       )}

@@ -1,5 +1,14 @@
 # BUILDLOG
 
+## collectibles grid — chronicler.v1.3 — 2026-06-21
+
+`collectibles.items` now lists every real collectible (`{id, name, seen}` — known
+id or seen; null slot 0 excluded), so the seen/unseen set is fully named. Seen
+count now excludes the null slot. SPA gains a full-width **Collectibles** grid
+(green = seen, dim = still to find, monster… item name on hover). On the real
+save: 722 items, 388 seen / 334 to find. Schema → v1.3; collectibles `seen_items`
+replaced by the richer `items`. Tests: 38 passed, 1 skipped.
+
 ## multi-slot + SPA switcher + mobile — 2026-06-21
 
 - **Server** now takes a save *or* a whole `remote/` folder. New `GET /slots`
