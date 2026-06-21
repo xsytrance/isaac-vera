@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>isaac-vera · save dashboard</title>
+<style>
+  :root { --bg:#0e0d12; --panel:#191721; --ink:#ece8f5; --dim:#8a8499;
+          --good:#7ee787; --bad:#ff7b72; --accent:#b794f6; --line:#2b2833; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink);
+         font:15px/1.5 ui-monospace,Menlo,Consolas,monospace; padding:24px; }
+  h1 { font-size:20px; margin:0 0 4px; }
+  .sub { color:var(--dim); margin-bottom:20px; }
+  .grid { display:grid; gap:16px; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); }
+  .panel { background:var(--panel); border:1px solid var(--line); border-radius:12px;
+           padding:16px; }
+  .panel h2 { font-size:13px; text-transform:uppercase; letter-spacing:.08em;
+              color:var(--dim); margin:0 0 12px; }
+  .bar { height:14px; background:#000; border-radius:7px; overflow:hidden; margin:8px 0; }
+  .bar > div { height:100%; background:linear-gradient(90deg,var(--accent),var(--good)); }
+  .big { font-size:30px; font-weight:700; }
+  .stat { display:flex; justify-content:space-between; padding:3px 0; border-bottom:1px dashed var(--line); }
+  .stat b { font-weight:600; }
+  .chips { display:flex; flex-wrap:wrap; gap:6px; }
+  .chip { padding:3px 9px; border-radius:20px; font-size:12px; border:1px solid var(--line); }
+  .chip.on { color:var(--good); border-color:#2f5b3a; }
+  .chip.off { color:var(--dim); opacity:.6; }
+  .row { display:flex; justify-content:space-between; gap:8px; padding:2px 0; }
+  .row .v { color:var(--dim); }
+  .boss { color:var(--accent); }
+  .next { max-height:340px; overflow:auto; }
+  .next .n { font-weight:600; }
+  .next .h { color:var(--dim); font-size:13px; }
+  .next li { padding:6px 0; border-bottom:1px solid var(--line); list-style:none; }
+  ul { margin:0; padding:0; }
+  .err { color:var(--bad); }
+  .seal { color:var(--good); font-size:12px; }
+</style>
+</head>
+<body>
+  <h1 id="title">isaac-vera</h1>
+  <div class="sub" id="sub">loading…</div>
+  <div class="grid" id="grid"></div>
+
+<script>
+const num = n => (typeof n === "number") ? n.toLocaleString() : "—";
+const el = (t, c, h) => { const e=document.createElement(t); if(c)e.className=c; if(h!=null)e.innerHTML=h; return e; };
+const panel = (title, body) => { const p=el("div","panel"); p.append(el("h2",null,title)); p.append(body); return p; };
+
+async function main(){
+  let f;
+  try { f = await (await fetch("/facts")).json(); }
+  catch(e){ document.getElementById("sub").innerHTML = "<span class='err'>could not load /facts</span>"; return; }
+  const s=f.source, c=f.completion, st=f.stats, coll=f.collectibles, best=f.bestiary;
+  document.getElementById("title").textContent = `isaac-vera · ${s.game||"Isaac"} save`;
+  document.getElementById("sub").innerHTML =
+    `${s.name} · ${num(s.size_bytes)} bytes · <span class="seal">read-only ✓ parser-truth</span>`;
+  const g = document.getElementById("grid");
+
+  // Completion
+  const prog = (c.dead_god_progress||0)*100;
+  const comp = el("div");
+  comp.append(el("div","big", `${c.achievements_unlocked}/${c.achievements_total}`));
+  comp.append(el("div",null, `achievements · Dead God: <b>${c.dead_god?"YES 💀":"not yet"}</b>`));
+  const bar=el("div","bar"); bar.append(el("div",null,"")); bar.firstChild.style.width=prog+"%"; comp.append(bar);
+  comp.append(el("div",null, `${prog.toFixed(1)}%`));
+  g.append(panel("Completion", comp));
+
+  // Characters
+  const ch=c.characters;
+  if(ch){
+    const wrap=el("div");
+    wrap.append(el("div",null,`<b>${ch.unlocked_count}/${ch.tracked_total}</b> non-tainted unlocked`));
+    const chips=el("div","chips");
+    (ch.unlocked||[]).forEach(n=>chips.append(el("span","chip on",n)));
+    (ch.locked||[]).forEach(n=>chips.append(el("span","chip off",n)));
+    wrap.append(chips);
+    wrap.append(el("div","sub",`tainted: not tracked from save data`));
+    g.append(panel("Characters", wrap));
+  }
+
+  // Stats
+  const sb=el("div");
+  const stat=(k,v)=>{ const r=el("div","stat"); r.append(el("span",null,k)); r.append(el("b",null,num(v))); sb.append(r); };
+  stat("Deaths",st.deaths); stat("Mom kills",st.mom_kills);
+  stat("Best win streak",st.best_win_streak); stat("Rocks broken",st.rocks_broken);
+  stat("Donation machine",st.donation_machine_coins); stat("Eden tokens",st.eden_tokens);
+  stat("Items seen",coll.seen);
+  g.append(panel("Lifetime stats", sb));
+
+  // Bestiary
+  if(best && best.parsed){
+    const cats={}; (best.categories||[]).forEach(x=>cats[x.label]=x);
+    const bb=el("div");
+    const block=(label,verb)=>{ const cat=cats[label]; if(!cat)return;
+      bb.append(el("div","sub",verb));
+      (cat.top||[]).slice(0,5).forEach(t=>{ const r=el("div","row");
+        r.append(el("span",t.boss?"boss":null,t.name)); r.append(el("span","v",num(t.value))); bb.append(r); }); };
+    block("kills","Most killed"); block("encounters","Most encountered"); block("deaths","Killed you most");
+    g.append(panel(`Bestiary · ${best.total_entries} tracked`, bb));
+  }
+
+  // What's next
+  const nx=el("ul","next");
+  (c.locked||[]).slice(0,40).forEach(a=>{ const li=el("li");
+    li.append(el("div","n",a.name)); if(a.unlock) li.append(el("div","h",a.unlock)); nx.append(li); });
+  g.append(panel(`What's left · ${(c.locked||[]).length} achievements`, nx));
+}
+main();
+</script>
+</body>
+</html>

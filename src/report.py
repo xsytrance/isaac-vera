@@ -9,6 +9,29 @@ from __future__ import annotations
 from typing import Any
 
 
+def render_slots(results: list[dict]) -> str:
+    """A compact one-line-per-slot summary of a scanned remote/ folder."""
+    L = ["# Isaac Save Slots", ""]
+    L.append(f"{'slot':<28} {'game':<12} {'achv':>9} {'deadgod':>7} "
+             f"{'deaths':>6} {'items':>9} {'chars':>6}")
+    L.append("-" * 86)
+    for r in results:
+        if not r.get("ok"):
+            L.append(f"{r['file']:<28} ERROR: {r.get('error', '')[:40]}")
+            continue
+        f = r["facts"]
+        c, s, coll = f["completion"], f["stats"], f["collectibles"]
+        ch = c.get("characters") or {}
+        dg = "YES" if c.get("dead_god") else "-"
+        L.append(
+            f"{r['file']:<28} {str(f['source'].get('game')):<12} "
+            f"{c.get('achievements_unlocked',0):>4}/{c.get('achievements_total',0):<4} "
+            f"{dg:>7} {(_num(s.get('deaths'))):>6} "
+            f"{coll.get('seen',0):>4}/{coll.get('total',0):<4} "
+            f"{ch.get('unlocked_count','-')}/{ch.get('tracked_total','-')}")
+    return "\n".join(L)
+
+
 def _bar(frac: float, width: int = 24) -> str:
     frac = max(0.0, min(1.0, frac))
     filled = round(frac * width)

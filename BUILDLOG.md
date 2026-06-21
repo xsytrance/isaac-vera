@@ -1,5 +1,21 @@
 # BUILDLOG
 
+## frontend + multi-slot — 2026-06-21
+
+- **Dashboard frontend** (`src/server/dashboard.html`, served at `GET /`): a
+  self-contained, zero-build, no-deps page (vanilla JS + inline CSS, dark theme)
+  that fetches `/facts` and renders completion, character chips, lifetime stats,
+  named bestiary (most killed / encountered / killed-you-most), and a scrollable
+  "what's left". Server now serves `text/html` and takes `--bind` (use
+  `0.0.0.0` to reach it over the tailnet). This is the "B" surface — the thin
+  client to prime-as-brain.
+- **Multi-slot folder support** (`src/parser/slots.py`): point the CLI at a
+  Steam `remote/` folder and it parses every `*persistentgamedata*.dat`,
+  reporting a per-slot table (achv / Dead God / deaths / items / chars) and the
+  most-progressed slot. Bad files are reported, not crashed on. On the real
+  export: slot 1 active (111/642), slots 2 & 3 fresh.
+- Tests: 33 passed, 1 skipped (added dashboard-route + folder-scan tests).
+
 ## v1.2 — bestiary names + category labels — 2026-06-21
 
 Resolved two long-standing nulls at once, both sourced and validated:

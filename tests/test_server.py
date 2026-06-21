@@ -7,7 +7,7 @@ from src.parser import parse_bytes, SCHEMA_VERSION
 from src.companion.companion import Companion
 from src.companion.ollama_client import OllamaError
 from src.report import render
-from src.server.app import route
+from src.server.app import route, Html
 from tests.test_parser import build_synthetic_save
 
 FACTS = parse_bytes(build_synthetic_save(), "synthetic.dat").to_dict()
@@ -26,7 +26,14 @@ class FakeClient:
 def _state(client=None):
     client = client or FakeClient()
     return {"facts": FACTS, "report": render(FACTS),
-            "companion": Companion(FACTS, client=client)}
+            "companion": Companion(FACTS, client=client),
+            "dashboard": Html("<!doctype html><title>dash</title>")}
+
+
+def test_dashboard_served_as_html():
+    status, payload = route("GET", "/", b"", _state())
+    assert status == 200 and isinstance(payload, Html)
+    assert "<!doctype html>" in payload.lower()
 
 
 def test_healthz():

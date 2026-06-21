@@ -193,6 +193,18 @@ def test_report_renders_readable_text():
     assert "Magdalene" not in text or True  # sample list is bounded; just ensure no crash
 
 
+def test_scan_folder(tmp_path):
+    from src.parser.slots import scan, most_progressed
+    (tmp_path / "rep+persistentgamedata1.dat").write_bytes(build_synthetic_save())
+    (tmp_path / "rep_persistentgamedata2.dat").write_bytes(b"GARBAGE" + b"\x00" * 40)
+    results = scan(str(tmp_path))
+    assert len(results) == 2
+    ok = [r for r in results if r["ok"]]
+    bad = [r for r in results if not r["ok"]]
+    assert len(ok) == 1 and len(bad) == 1  # bad save reported, not crashing
+    assert most_progressed(results)["file"] == "rep+persistentgamedata1.dat"
+
+
 def test_bad_magic_raises():
     with pytest.raises(SaveParseError):
         parse_bytes(b"NOTASAVE" + b"\x00" * 64, "bad.dat")

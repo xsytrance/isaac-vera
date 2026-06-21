@@ -32,13 +32,22 @@ python3 -m src.parser.cli path/to/persistentgamedata1.dat --report
 python3 -m src.parser.cli path/to/persistentgamedata1.dat
 python3 -m src.parser.cli path/to/save.dat --raw   # include raw arrays
 
-# Or run the prime-as-brain service (stdlib only, no deps):
-#   GET /facts · GET /report · POST /ask · GET /healthz
-python3 -m src.server.app path/to/save.dat --port 8765
+# Multi-slot: point at a whole Steam remote/ folder
+python3 -m src.parser.cli /path/to/userdata/250900/remote/
+
+# Run the prime-as-brain service + dashboard frontend (stdlib only, no deps):
+#   GET /  dashboard · GET /facts · GET /report · POST /ask · GET /healthz
+python3 -m src.server.app path/to/save.dat --port 8765 --bind 0.0.0.0
+#   then open http://<this-box>:8765/ in a browser
 curl localhost:8765/facts
-curl localhost:8765/report
 curl -X POST localhost:8765/ask -d '{"question":"how close am I to Dead God?"}'
 ```
+
+### Frontend / dashboard
+`GET /` serves a self-contained dashboard (no build step, no deps): completion
+bar, character roster, lifetime stats, named bestiary, and a "what's left" list
+— all rendered from `/facts`. Run the server with `--bind 0.0.0.0` to open it
+from another device on your tailnet.
 
 ### Vera — grounded companion (Ollama)
 Ask questions about your save; answers are grounded strictly in parsed facts
