@@ -1,0 +1,46 @@
+# ── isaac-vera .gitignore ──────────────────────────────────────────────
+# Hardened up front (RUNBOOK STEP B.3): never commit save binaries or art.
+
+# Save files / binaries — READ-ONLY corpus, never tracked, never redistributed.
+*.dat
+*.dat.bak
+fixtures/*.dat
+fixtures/**/*.dat
+saves/
+corpus/
+
+# Art / audio (Spine 2 territory; never commit game-ripped assets).
+art/
+audio/
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.gif
+*.mp3
+*.wav
+*.ogg
+
+# Dogfood / scratch planning output (fft-psx-vera convention).
+dogfood-output/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+*.egg-info/
+
+# Node (only if a JS seam is ever scaffolded)
+node_modules/
+dist/
+
+# Local secrets / env
+.env
+.env.*
+*.local
+
+# OS
+.DS_Store
+Thumbs.db
