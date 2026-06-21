@@ -1,7 +1,14 @@
-import type { Facts } from "./types";
+import type { Facts, Slot } from "./types";
 
-export async function getFacts(): Promise<Facts> {
-  const r = await fetch("/facts");
+export async function getSlots(): Promise<Slot[]> {
+  const r = await fetch("/slots");
+  if (!r.ok) throw new Error(`/slots -> HTTP ${r.status}`);
+  return r.json();
+}
+
+export async function getFacts(slot?: string): Promise<Facts> {
+  const q = slot ? `?slot=${encodeURIComponent(slot)}` : "";
+  const r = await fetch(`/facts${q}`);
   if (!r.ok) throw new Error(`/facts -> HTTP ${r.status}`);
   return r.json();
 }
@@ -15,12 +22,12 @@ export interface AskResult {
 
 // Posts to /ask. Never fabricates: surfaces the server's error (e.g. prime
 // unreachable -> 503) rather than inventing an answer.
-export async function ask(question: string): Promise<AskResult> {
+export async function ask(question: string, slot?: string): Promise<AskResult> {
   try {
     const r = await fetch("/ask", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ question }),
+      body: JSON.stringify({ question, slot }),
     });
     const d = await r.json();
     return r.ok

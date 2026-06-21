@@ -1,6 +1,7 @@
 """Server router tests — pure `route()`, no socket, model mocked."""
 from __future__ import annotations
 
+import copy
 import json
 
 from src.parser import parse_bytes, SCHEMA_VERSION
@@ -23,11 +24,26 @@ class FakeClient:
         return self.reply
 
 
+def _slot(facts, client):
+    return {"facts": facts, "report": render(facts),
+            "companion": Companion(facts, client=client)}
+
+
 def _state(client=None):
     client = client or FakeClient()
-    return {"facts": FACTS, "report": render(FACTS),
-            "companion": Companion(FACTS, client=client),
+    return {"slots": {"synthetic.dat": _slot(FACTS, client)},
+            "order": ["synthetic.dat"], "default": "synthetic.dat", "client": client,
             "dashboard": Html("<!doctype html><title>dash</title>")}
+
+
+def _multi_state():
+    client = FakeClient()
+    f2 = copy.deepcopy(FACTS)
+    f2["source"]["name"] = "slot2.dat"
+    f2["completion"]["achievements_unlocked"] = 0
+    return {"slots": {"slot1.dat": _slot(FACTS, client), "slot2.dat": _slot(f2, client)},
+            "order": ["slot1.dat", "slot2.dat"], "default": "slot1.dat",
+            "client": client, "dashboard": Html("x")}
 
 
 def test_dashboard_served_as_html():
@@ -91,3 +107,27 @@ def test_ask_model_down_is_503_not_fabricated():
 def test_unknown_route_404():
     status, payload = route("GET", "/nope", b"", _state())
     assert status == 404 and "endpoints" in payload
+
+
+def test_slots_listing():
+    status, payload = route("GET", "/slots", b"", _multi_state())
+    assert status == 200 and len(payload) == 2
+    assert {x["file"] for x in payload} == {"slot1.dat", "slot2.dat"}
+    default = [x for x in payload if x["default"]]
+    assert len(default) == 1 and default[0]["file"] == "slot1.dat"
+
+
+def test_facts_slot_selection():
+    st = _multi_state()
+    _, p = route("GET", "/facts?slot=slot2.dat", b"", st)
+    assert p["source"]["name"] == "slot2.dat"
+    _, p = route("GET", "/facts", b"", st)  # default slot
+    assert p["source"]["name"] == FACTS["source"]["name"]
+    _, p = route("GET", "/facts?slot=nonexistent.dat", b"", st)  # falls back to default
+    assert p["source"]["name"] == FACTS["source"]["name"]
+
+
+def test_ask_uses_selected_slot():
+    body = json.dumps({"question": "hi", "slot": "slot2.dat"}).encode()
+    status, payload = route("POST", "/ask", body, _multi_state())
+    assert status == 200 and "model" in payload

@@ -35,11 +35,12 @@ python3 -m src.parser.cli path/to/save.dat --raw   # include raw arrays
 # Multi-slot: point at a whole Steam remote/ folder
 python3 -m src.parser.cli /path/to/userdata/250900/remote/
 
-# Run the prime-as-brain service + dashboard frontend (stdlib only, no deps):
-#   GET /  dashboard · GET /facts · GET /report · POST /ask · GET /healthz
+# Run the prime-as-brain service + frontend (stdlib only, no deps):
+#   GET / frontend · /slots · /facts[?slot=] · /report[?slot=] · POST /ask · /healthz
 python3 -m src.server.app path/to/save.dat --port 8765 --bind 0.0.0.0
+python3 -m src.server.app /path/to/userdata/250900/remote/   # all slots at once
 #   then open http://<this-box>:8765/ in a browser
-curl localhost:8765/facts
+curl localhost:8765/slots
 curl -X POST localhost:8765/ask -d '{"question":"how close am I to Dead God?"}'
 ```
 

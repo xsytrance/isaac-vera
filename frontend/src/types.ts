@@ -1,5 +1,14 @@
 // Mirrors the chronicler facts schema served at GET /facts.
 
+export interface Slot {
+  file: string;
+  game: string | null;
+  achievements_unlocked: number;
+  achievements_total: number;
+  dead_god: boolean;
+  default: boolean;
+}
+
 export interface BestiaryEntry {
   id: number;
   variant: number;
