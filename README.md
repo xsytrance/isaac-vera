@@ -43,11 +43,23 @@ curl localhost:8765/facts
 curl -X POST localhost:8765/ask -d '{"question":"how close am I to Dead God?"}'
 ```
 
-### Frontend / dashboard
-`GET /` serves a self-contained dashboard (no build step, no deps): completion
-bar, character roster, lifetime stats, named bestiary, and a "what's left" list
-— all rendered from `/facts`. Run the server with `--bind 0.0.0.0` to open it
-from another device on your tailnet.
+### Frontend
+
+Two options, both talking to the same server:
+
+**React/Vite SPA** (`frontend/`) — the full app: completion, character roster,
+stats, named bestiary, prioritized "what's next", and the Ask Vera chat.
+```bash
+cd frontend
+npm install
+npm run dev        # dev server on :5173, proxies /facts /ask to :8765
+# — or build it and let the Python server serve it (one command in prod):
+npm run build      # -> frontend/dist
+python3 -m src.server.app save.dat --bind 0.0.0.0   # serves the built SPA at /
+```
+When `frontend/dist` exists the server serves the SPA at `/`; otherwise it falls
+back to a **zero-build dashboard** (`src/server/dashboard.html`) — same content,
+no toolchain. Use `--bind 0.0.0.0` to open it from another device on your tailnet.
 
 ### Vera — grounded companion (Ollama)
 Ask questions about your save; answers are grounded strictly in parsed facts

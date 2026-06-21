@@ -26,11 +26,36 @@ from ..companion.companion import Companion
 from ..companion.ollama_client import OllamaClient, OllamaError
 from ..report import render
 
+from collections import namedtuple
+
 _DASHBOARD = Path(__file__).parent / "dashboard.html"
+# Built SPA (frontend/dist) lives at the repo root; gitignored, present after
+# `npm run build`. When present, it is served in preference to dashboard.html.
+_SPA_DIST = Path(__file__).resolve().parents[2] / "frontend" / "dist"
+
+_CTYPES = {".html": "text/html; charset=utf-8", ".js": "application/javascript",
+           ".css": "text/css", ".svg": "image/svg+xml", ".json": "application/json",
+           ".ico": "image/x-icon", ".woff2": "font/woff2", ".map": "application/json"}
+
+Static = namedtuple("Static", "content_type body")
 
 
 class Html(str):
     """Marker so the handler serves a string as text/html (vs text/plain)."""
+
+
+def _load_spa(dist: Path) -> dict:
+    """Map url paths -> Static(content_type, bytes) for a built SPA, or {}."""
+    if not (dist / "index.html").is_file():
+        return {}
+    out: dict[str, Static] = {}
+    for f in dist.rglob("*"):
+        if f.is_file():
+            url = "/" + f.relative_to(dist).as_posix()
+            ct = _CTYPES.get(f.suffix, "application/octet-stream")
+            out[url] = Static(ct, f.read_bytes())
+    out["/"] = out["/index.html"]  # SPA entry
+    return out
 
 
 def make_state(path: str, host: str | None = None, model: str | None = None) -> dict:
@@ -41,6 +66,7 @@ def make_state(path: str, host: str | None = None, model: str | None = None) -> 
         "report": render(facts),
         "companion": companion,
         "dashboard": Html(_DASHBOARD.read_text(encoding="utf-8")),
+        "static": _load_spa(_SPA_DIST),
     }
 
 
@@ -49,8 +75,11 @@ def route(method: str, path: str, body: bytes, state: dict):
     an Html str (-> text/html), or a plain str (-> text/plain). Never fabricates:
     a model failure becomes 503."""
     p = "/" + path.strip("/")
+    static = state.get("static") or {}
+    if method == "GET" and p in static:          # built SPA asset (or its index)
+        return 200, static[p]
     if method == "GET" and p in ("/", "/dashboard"):
-        return 200, state["dashboard"]
+        return 200, static.get("/", state["dashboard"])
     if method == "GET" and p == "/healthz":
         return 200, {"ok": True, "schema": SCHEMA_VERSION,
                      "model": state["companion"].client.model}
@@ -78,7 +107,10 @@ def route(method: str, path: str, body: bytes, state: dict):
 def _build_handler(state: dict):
     class Handler(BaseHTTPRequestHandler):
         def _respond(self, status: int, payload) -> None:
-            if isinstance(payload, Html):
+            if isinstance(payload, Static):
+                body = payload.body
+                ctype = payload.content_type
+            elif isinstance(payload, Html):
                 body = payload.encode("utf-8")
                 ctype = "text/html; charset=utf-8"
             elif isinstance(payload, str):

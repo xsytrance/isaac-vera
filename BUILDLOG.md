@@ -1,5 +1,17 @@
 # BUILDLOG
 
+## real frontend — React/Vite SPA — 2026-06-21
+
+`frontend/` is a proper Vite + React + TypeScript app (strict mode; `npm run
+build` → 148 KB, verified compiling here). Components: completion, character
+roster, stats, named bestiary, prioritized "what's next" (from `facts.next`),
+and an **Ask Vera** chat (POST `/ask`, honest on failure). Dev uses a Vite proxy
+to the prime-as-brain server; for prod, the Python server now **serves the built
+`frontend/dist`** at `/` (with correct content-types) and falls back to the
+zero-build `dashboard.html` when no build is present. node_modules / dist /
+*.tsbuildinfo are gitignored — source only. Server tests cover SPA-serving;
+35 passed, 1 skipped.
+
 ## what's-next intelligence — 2026-06-21
 
 `src/parser/priorities.py` groups the locked achievements into impact-ordered
