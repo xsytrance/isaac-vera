@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { Facts } from "../types";
 
 const num = (n: number | null | undefined) =>
@@ -113,21 +114,71 @@ export function BestiaryCard({ f }: { f: Facts }) {
 export function Collectibles({ f }: { f: Facts }) {
   const c = f.collectibles;
   const items = c.items ?? [];
+  const [q, setQ] = useState("");
+  const [filter, setFilter] = useState<"all" | "unseen" | "seen">("all");
   if (!items.length) return null;
+
+  const query = q.trim().toLowerCase();
+  const base = items.filter((i) =>
+    filter === "all" ? true : filter === "seen" ? i.seen : !i.seen,
+  );
+  const matches = query
+    ? base.filter((i) => i.name.toLowerCase().includes(query))
+    : base;
+  const unseen = items.filter((i) => !i.seen).length;
+
   return (
     <Panel title={`Collectibles · ${c.seen}/${c.total} seen`}>
-      <div className="muted small">
-        green = seen · dim = still to find ({items.filter((i) => !i.seen).length})
-      </div>
-      <div className="itemgrid">
-        {items.map((i) => (
-          <span
-            key={i.id}
-            className={`cell ${i.seen ? "seen" : ""}`}
-            title={`${i.name}${i.seen ? "" : " — not seen"}`}
-          />
+      <div className="collctl">
+        <input
+          className="search"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="search items by name…"
+        />
+        {(["all", "unseen", "seen"] as const).map((k) => (
+          <button
+            key={k}
+            className={`fbtn ${filter === k ? "active" : ""}`}
+            onClick={() => setFilter(k)}
+          >
+            {k === "unseen" ? `to find (${unseen})` : k}
+          </button>
         ))}
       </div>
+
+      {query ? (
+        <ul className="itemlist">
+          {matches.length === 0 && <li className="muted">no match</li>}
+          {matches.slice(0, 80).map((i) => (
+            <li key={i.id} className={i.seen ? "got" : "miss"}>
+              <span className="dot" />
+              {i.name}
+            </li>
+          ))}
+          {matches.length > 80 && (
+            <li className="muted">…and {matches.length - 80} more</li>
+          )}
+        </ul>
+      ) : (
+        <>
+          <div className="muted small">
+            {filter === "all"
+              ? "green = seen · dim = to find"
+              : `showing ${matches.length} ${filter}`}{" "}
+            · hover a cell for its name
+          </div>
+          <div className="itemgrid">
+            {matches.map((i) => (
+              <span
+                key={i.id}
+                className={`cell ${i.seen ? "seen" : ""}`}
+                title={`${i.name}${i.seen ? "" : " — not seen"}`}
+              />
+            ))}
+          </div>
+        </>
+      )}
     </Panel>
   );
 }
