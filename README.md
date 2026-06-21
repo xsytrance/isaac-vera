@@ -28,9 +28,12 @@ python3 -m src.parser.cli path/to/persistentgamedata1.dat --report
 python3 -m src.parser.cli path/to/persistentgamedata1.dat
 python3 -m src.parser.cli path/to/save.dat --raw   # include raw arrays
 
-# Or serve them read-only (stdlib only, no deps)
+# Or run the prime-as-brain service (stdlib only, no deps):
+#   GET /facts · GET /report · POST /ask · GET /healthz
 python3 -m src.server.app path/to/save.dat --port 8765
 curl localhost:8765/facts
+curl localhost:8765/report
+curl -X POST localhost:8765/ask -d '{"question":"how close am I to Dead God?"}'
 ```
 
 ### Vera — grounded companion (Ollama)

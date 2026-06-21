@@ -1,5 +1,19 @@
 # BUILDLOG
 
+## v1.2 — prime-as-brain service — 2026-06-21
+
+Unified the pieces into one read-only service (`src/server/app.py`) so a single
+process on a tailnet box exposes everything:
+- `GET /facts` (chronicler.v1 JSON), `GET /report` (text), `GET /healthz`,
+  and `POST /ask {question, history?}` → grounded answer via Vera/Ollama.
+- Routing is a pure `route()` function → unit-tested without a socket or model.
+- A model failure returns **503**, never a fabricated answer (parser-truth).
+- Tests: 31 passed (8 server: routes, 400/404/503 paths, model mocked). Live
+  smoke against the real save: `/facts`, `/report`, `/healthz` OK; `/ask` attempts
+  prime (unreachable from CI) honestly.
+
+---
+
 ## v1.1 — Vera, the grounded companion — 2026-06-21
 
 Capstone of the "A + B on top of the Chronicler" plan: a chat companion that
