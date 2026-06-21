@@ -1,5 +1,15 @@
 # BUILDLOG
 
+## what's-next intelligence — 2026-06-21
+
+`src/parser/priorities.py` groups the locked achievements into impact-ordered
+buckets (characters → challenges → greed → boss-completions → donation → other),
+each with a count + concrete examples carrying their real unlock hints, plus a
+headline. Pure derivation over the real locked list — categorizes, never invents.
+Exposed at `facts.next`, shown in the Report and Vera's truth block. On the real
+save: 6 characters, 49 challenges, 52 greed, 270 boss-completions, 6 donation,
+147 other. Tests: 34 passed, 1 skipped.
+
 ## frontend + multi-slot — 2026-06-21
 
 - **Dashboard frontend** (`src/server/dashboard.html`, served at `GET /`): a

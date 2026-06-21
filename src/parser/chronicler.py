@@ -18,6 +18,7 @@ from typing import Any, Optional
 from . import format as fmt
 from . import names
 from . import characters
+from . import priorities
 
 SCHEMA_VERSION = "chronicler.v1.2"
 
@@ -45,6 +46,7 @@ class ChroniclerFacts:
     stats: dict = field(default_factory=dict)
     collectibles: dict = field(default_factory=dict)
     bestiary: dict = field(default_factory=dict)
+    next: dict = field(default_factory=dict)
     chunks: list = field(default_factory=list)
     raw: dict = field(default_factory=dict)
     unknowns: list = field(default_factory=list)
@@ -284,6 +286,9 @@ def parse_bytes(data: bytes, source_name: str = "<bytes>") -> ChroniclerFacts:
         _parse_collectibles(data, by_type[fmt.COLLECTIBLES], facts)
     if fmt.BESTIARY in by_type:
         _parse_bestiary(data, by_type[fmt.BESTIARY], facts)
+
+    # 'What's next' — group the locked achievements into actionable buckets.
+    facts.next = priorities.whats_next(facts.completion.get("locked", []))
 
     # Record any chunk types we did not reach (e.g. parser stopped early).
     reached = set(by_type)

@@ -117,16 +117,21 @@ def render(facts: dict) -> str:
         _line("deaths", "Killed you most")
         L.append("")
 
-    # What's left — sample of locked achievements with how-to-unlock hints.
+    # What's next — grouped, prioritized buckets, then a few concrete picks.
+    nxt = facts.get("next") or {}
     locked = comp.get("locked") or []
-    if locked:
-        L.append(f"## What's left — {len(locked)} achievements remaining")
-        for a in locked[:12]:
-            hint = a.get("unlock") or ""
-            hint = (hint[:70] + "…") if len(hint) > 71 else hint
-            L.append(f"  • {a['name']}" + (f" — {hint}" if hint else ""))
-        if len(locked) > 12:
-            L.append(f"  …and {len(locked) - 12} more")
+    if nxt.get("groups"):
+        L.append(f"## What's next — {len(locked)} achievements remaining")
+        L.append(nxt.get("headline", ""))
+        for grp in nxt["groups"]:
+            L.append(f"  • {grp['label']}: {grp['count']}")
+        # A couple concrete picks from the top group.
+        top = nxt["groups"][0]
+        L.append(f"\nStart here ({top['label']}):")
+        for ex in top["examples"][:5]:
+            hint = ex.get("unlock") or ""
+            hint = (hint[:66] + "…") if len(hint) > 67 else hint
+            L.append(f"  • {ex['name']}" + (f" — {hint}" if hint else ""))
         L.append("")
 
     # Honest nulls

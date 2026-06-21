@@ -69,6 +69,12 @@ def build_truth_block(facts: dict, max_locked: int = 60) -> str:
                 hi = ", ".join(f"{t['name']} ({t['value']})" for t in c["top"][:3])
                 L.append(f"  {verb}: {hi}")
 
+    nxt = facts.get("next") or {}
+    if nxt.get("groups"):
+        L.append("\nWHAT'S NEXT (locked achievements grouped by impact):")
+        for grp in nxt["groups"]:
+            L.append(f"  {grp['label']}: {grp['count']}")
+
     locked = comp.get("locked") or []
     if locked:
         L.append(f"\nWHAT'S LEFT ({len(locked)} achievements remaining; "

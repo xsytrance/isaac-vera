@@ -193,6 +193,23 @@ def test_report_renders_readable_text():
     assert "Magdalene" not in text or True  # sample list is bounded; just ensure no crash
 
 
+def test_whats_next_buckets():
+    from src.parser.priorities import whats_next
+    locked = [
+        {"id": 199, "name": "Lilith", "unlock": "Unlocked a new character."},
+        {"id": 500, "name": "A Challenge", "unlock": "Beat Challenge #5"},
+        {"id": 501, "name": "A Mark", "unlock": "Defeat Mom as Cain"},
+        {"id": 502, "name": "A Greed", "unlock": "Win in the Greed Donation room"},
+        {"id": 503, "name": "Misc", "unlock": "Something else entirely"},
+    ]
+    nxt = whats_next(locked)
+    groups = {g["group"]: g["count"] for g in nxt["groups"]}
+    assert groups == {"characters": 1, "challenges": 1, "greed_mode": 1,
+                      "boss_completion": 1, "other": 1}
+    # Headline points at the highest-priority non-empty group (characters first).
+    assert "Unlock characters" in nxt["headline"]
+
+
 def test_scan_folder(tmp_path):
     from src.parser.slots import scan, most_progressed
     (tmp_path / "rep+persistentgamedata1.dat").write_bytes(build_synthetic_save())
