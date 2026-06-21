@@ -1,5 +1,29 @@
 # BUILDLOG
 
+## v1.1 — Vera, the grounded companion — 2026-06-21
+
+Capstone of the "A + B on top of the Chronicler" plan: a chat companion that
+answers questions about a save, grounded strictly in chronicler facts.
+
+- **Model backend: Ollama on `prime` over Tailscale** (`http://100.110.224.126:11434`).
+  `src/companion/ollama_client.py` — stdlib-only client; host/model env-configurable
+  (`OLLAMA_HOST` / `OLLAMA_MODEL`); auto-detects the installed model when unset.
+  prime is a 100.x Tailscale address, unreachable from the CI/cloud container, so
+  the model is mocked in tests (project rule) and runs live from any tailnet box.
+- **Grounding** (`src/companion/grounding.py`): a hard TRUTH BLOCK built from
+  facts — completion, stats, collectibles, bestiary, and the WHAT'S LEFT list
+  (locked achievements + how-to-unlock hints). Non-negotiable rules: only use the
+  truth block, report nulls as "not tracked", never invent a number. Same
+  parser-truth discipline as fft-psx-vera's prompt hard-truth block.
+- **CLI** (`src/companion/cli.py`): one-shot (`save.dat "what next?"`),
+  interactive REPL, `--show-prompt` (inspect grounding, no model call),
+  `--list-models`.
+- Tests: 23 passed (8 companion: grounding content, message threading, model
+  resolution; model faked — no network).
+- Polish: vendored name tables HTML-unescaped (clean apostrophes/ampersands).
+
+---
+
 ## v1 — Rich facts + Save Report — 2026-06-21
 
 First real app surface, built on a real player save (Egi's Steam `250900` export:

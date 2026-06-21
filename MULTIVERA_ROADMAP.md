@@ -15,6 +15,11 @@ Static save analysis. `persistentgamedata{N}.dat` → `chronicler.v0` facts.
 - Output is the seam contract every later layer reads (prime-as-brain).
 - **Status: shipped (smoke test).** See `BUILDLOG.md`.
 
+### Spine 1.5 — Vera, the companion  ✅ v1.1
+Grounded chat over chronicler facts (Save Report + Q&A). Backed by Ollama on
+`prime` over Tailscale. Parser-truth: only answers from the truth block, never
+invents numbers. This is the "A + B" surface on top of the Chronicler.
+
 ### Spine 2 — The Commentator  ⛔ not started
 Live run feed via **REPENTOGON**. Real-time events (item pickups, boss kills,
 deaths) → commentary / cinematics / Living Text.

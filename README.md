@@ -33,6 +33,18 @@ python3 -m src.server.app path/to/save.dat --port 8765
 curl localhost:8765/facts
 ```
 
+### Vera — grounded companion (Ollama)
+Ask questions about your save; answers are grounded strictly in parsed facts
+(never invents numbers). Backed by Ollama on **prime** over Tailscale
+(`http://100.110.224.126:11434` by default).
+```bash
+python3 -m src.companion.cli save.dat "what should I unlock next?"
+python3 -m src.companion.cli save.dat            # interactive
+python3 -m src.companion.cli save.dat --show-prompt   # inspect grounding, no model call
+OLLAMA_HOST=http://100.110.224.126:11434 OLLAMA_MODEL=llama3.1 \
+  python3 -m src.companion.cli save.dat "how close am I to Dead God?"
+```
+
 ```python
 from src.parser import parse_file
 facts = parse_file("persistentgamedata1.dat").to_dict()
