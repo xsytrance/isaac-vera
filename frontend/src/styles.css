@@ -74,3 +74,19 @@ code { background: #000; padding: 2px 6px; border-radius: 5px; }
   padding: 0 18px; border-radius: 8px; cursor: pointer;
 }
 .chatbar button:disabled { opacity: 0.5; cursor: wait; }
+
+.slots { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+.slottab {
+  background: var(--panel); border: 1px solid var(--line); color: var(--ink);
+  padding: 8px 12px; border-radius: 9px; cursor: pointer; font: inherit; font-size: 13px;
+}
+.slottab.active { border-color: var(--accent); color: var(--accent); }
+
+@media (max-width: 600px) {
+  main { padding: 18px 14px 48px; }
+  h1 { font-size: 18px; }
+  .grid { grid-template-columns: 1fr; gap: 12px; }
+  .big { font-size: 26px; }
+  .msg { max-width: 100%; }
+  .slottab { width: 100%; }
+}

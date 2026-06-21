@@ -6,7 +6,7 @@ interface Msg {
   text: string;
 }
 
-export function VeraChat() {
+export function VeraChat({ slot }: { slot?: string }) {
   const [log, setLog] = useState<Msg[]>([]);
   const [q, setQ] = useState("");
   const [busy, setBusy] = useState(false);
@@ -17,7 +17,7 @@ export function VeraChat() {
     setQ("");
     setLog((l) => [...l, { role: "you", text }]);
     setBusy(true);
-    const r = await ask(text);
+    const r = await ask(text, slot);
     setLog((l) => [
       ...l,
       r.ok

@@ -1,5 +1,18 @@
 # BUILDLOG
 
+## multi-slot + SPA switcher + mobile — 2026-06-21
+
+- **Server** now takes a save *or* a whole `remote/` folder. New `GET /slots`
+  lists every slot (game, achievements, Dead God, which is default = most
+  progressed). `/facts`, `/report` accept `?slot=FILE`; `/ask` accepts `slot` in
+  the body — each slot gets its own grounded companion (sharing one Ollama
+  client). Single-file mode unchanged.
+- **SPA**: a slot switcher (tabs) when >1 slot; selecting one re-fetches facts and
+  routes chat to that slot. Plus a mobile breakpoint (single-column grid,
+  full-width tabs/messages). Rebuilds clean.
+- Tests: 38 passed, 1 skipped (added /slots, ?slot= selection, slot-scoped ask).
+- Verified live on the real 3-slot export (slot 1 default at 111/642).
+
 ## real frontend — React/Vite SPA — 2026-06-21
 
 `frontend/` is a proper Vite + React + TypeScript app (strict mode; `npm run
