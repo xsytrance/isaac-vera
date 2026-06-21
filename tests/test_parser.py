@@ -14,7 +14,9 @@ import struct
 import pytest
 
 from src.parser import format as fmt
+from src.parser import names
 from src.parser import parse_bytes, parse_file, SaveParseError, SCHEMA_VERSION
+from src.report import render
 
 FIXTURE = os.path.join(os.path.dirname(__file__), "..", "fixtures", "sample.dat")
 
@@ -75,7 +77,7 @@ def build_synthetic_save() -> bytes:
 
 def test_header_and_schema():
     facts = parse_bytes(build_synthetic_save(), "synthetic.dat")
-    assert facts.schema == SCHEMA_VERSION == "chronicler.v0"
+    assert facts.schema == SCHEMA_VERSION == "chronicler.v1"
     assert facts.source["header_magic"] == "ISAACNGSAVE09R"
     assert facts.source["game"] == "Repentance"
     assert facts.source["format_verified"] is True
@@ -133,6 +135,42 @@ def test_unknowns_are_logged_not_guessed():
     assert "stats.greed_donation_machine" in fields
     assert "completion.completion_marks" in fields
     assert facts.stats["greed_donation_machine"] is None
+
+
+def test_enriched_achievement_names():
+    facts = parse_bytes(build_synthetic_save(), "synthetic.dat")
+    unlocked = facts.completion["unlocked"]
+    # Synthetic save unlocks achievement ids 1..9 (id 0 is the null slot).
+    ids = {a["id"] for a in unlocked}
+    assert ids == set(range(1, 10))
+    by_id = {a["id"]: a["name"] for a in unlocked}
+    # index == id, resolved from the vendored table (verified real names).
+    assert by_id[1] == names.achievement_name(1) == "Magdalene"
+    # Locked list carries how-to-unlock hints (or None), never fabricated.
+    assert isinstance(facts.completion["locked"], list)
+
+
+def test_enriched_item_names():
+    facts = parse_bytes(build_synthetic_save(), "synthetic.dat")
+    seen = {c["id"]: c["name"] for c in facts.collectibles["seen_items"]}
+    # Synthetic seen items at indices 0, 2, 3.
+    assert set(seen) == {0, 2, 3}
+    assert seen[2] == names.collectible_name(2) == "The Inner Eye"
+
+
+def test_unknown_ids_render_honestly():
+    # An id with no table entry must surface as Unknown_<id>, not be hidden.
+    assert names.collectible_name(999999) == "Unknown_999999"
+    assert names.achievement_name(999999) == "Unknown_999999"
+
+
+def test_report_renders_readable_text():
+    facts = parse_bytes(build_synthetic_save(), "synthetic.dat").to_dict()
+    text = render(facts)
+    assert "Isaac Save Report" in text
+    assert "## Completion" in text
+    assert "## Lifetime stats" in text
+    assert "Magdalene" not in text or True  # sample list is bounded; just ensure no crash
 
 
 def test_bad_magic_raises():

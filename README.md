@@ -9,16 +9,22 @@ This is **Spine 1** of the two-spine plan (see `MULTIVERA_ROADMAP.md`). Spine 2
 (the Commentator — a REPENTOGON live run feed, commentary, cinematics) is **not**
 built here.
 
-## Scope (v0)
-- ✅ Parse Repentance (`ISAACNGSAVE09R`) saves into facts.
+## Scope (v1)
+- ✅ Parse Repentance / Repentance+ (`ISAACNGSAVE09R`) saves into facts.
 - ✅ Completion (achievements / Dead God), lifetime stats (deaths, kills, rocks,
   donation, eden tokens, win streak), collectibles seen, bestiary counts.
+- ✅ **ID → name resolution** for achievements & collectibles; `locked`
+  achievements carry in-game unlock hints. Unknown id → `Unknown_<id>`.
+- ✅ **Save Report** (`--report`): human-readable progress + what's left.
 - ✅ Strictly read-only. No save editing, ever.
-- ❌ No LLM, no commentary, no live feed (Spine 2).
+- ❌ No LLM companion yet (next), no live feed (Spine 2).
 
 ## Usage
 ```bash
-# Print facts as JSON to stdout
+# Human-readable Save Report (completion, stats, what's left + how-to)
+python3 -m src.parser.cli path/to/persistentgamedata1.dat --report
+
+# Print chronicler.v1 facts as JSON to stdout
 python3 -m src.parser.cli path/to/persistentgamedata1.dat
 python3 -m src.parser.cli path/to/save.dat --raw   # include raw arrays
 

@@ -16,8 +16,9 @@ from dataclasses import dataclass, field, asdict
 from typing import Any, Optional
 
 from . import format as fmt
+from . import names
 
-SCHEMA_VERSION = "chronicler.v0"
+SCHEMA_VERSION = "chronicler.v1"
 
 
 class SaveParseError(Exception):
@@ -125,6 +126,7 @@ def _parse_achievements(data: bytes, chunk: Chunk, facts: ChroniclerFacts) -> No
     # achievement unlocked. If the only locked slot is the sentinel, it's a
     # full clear. We report the count plainly and the boolean honestly.
     real_locked = [i for i in locked if i != 0]
+    unlocked_idx = [i for i, b in enumerate(blob) if b != 0]
     facts.completion = {
         "achievements_unlocked": unlocked,
         "achievements_total": len(blob),
@@ -133,24 +135,32 @@ def _parse_achievements(data: bytes, chunk: Chunk, facts: ChroniclerFacts) -> No
         # Per-character hard-mode completion marks are not yet mapped from the
         # achievement IDs -> left null rather than guessed.
         "completion_marks": None,
+        # Enriched (chronicler.v1): real names, and what's left + how to get it.
+        "unlocked": [
+            {"id": i, "name": names.achievement_name(i)} for i in unlocked_idx
+        ],
+        "locked": [
+            {"id": i, "name": names.achievement_name(i),
+             "unlock": names.achievement_unlock(i)}
+            for i in real_locked
+        ],
     }
     facts.note_unknown("completion.completion_marks",
-                       "per-character mark mapping not implemented in v0")
+                       "per-character mark mapping not implemented in v1")
     facts.raw["achievements_locked_indices"] = locked
 
 
 def _parse_collectibles(data: bytes, chunk: Chunk, facts: ChroniclerFacts) -> None:
     blob = data[chunk.data_offset:chunk.data_offset + chunk.data_len]
-    seen = sum(1 for b in blob if b != 0)
+    seen_idx = [i for i, b in enumerate(blob) if b != 0]
     facts.collectibles = {
         "total": chunk.count,
-        "seen": seen,
-        # Per-item touched/seen detail and item-name mapping deferred to a later
-        # spine; v0 reports counts only.
-        "by_id": None,
+        "seen": len(seen_idx),
+        # Enriched (chronicler.v1): which items have been touched/seen, by name.
+        "seen_items": [
+            {"id": i, "name": names.collectible_name(i)} for i in seen_idx
+        ],
     }
-    facts.note_unknown("collectibles.by_id",
-                       "per-item id->name mapping not implemented in v0")
 
 
 def _parse_bestiary(data: bytes, chunk: Chunk, facts: ChroniclerFacts) -> None:
@@ -196,7 +206,7 @@ def _parse_bestiary(data: bytes, chunk: Chunk, facts: ChroniclerFacts) -> None:
         "category_labels": None,
     }
     facts.note_unknown("bestiary.category_labels",
-                       "kill/encounter/hit/death labelling unconfirmed in v0")
+                       "kill/encounter/hit/death labelling unconfirmed in v1")
     if len(categories) != chunk.count:
         facts.note_unknown(
             "bestiary.category_count",
@@ -229,6 +239,7 @@ def parse_bytes(data: bytes, source_name: str = "<bytes>") -> ChroniclerFacts:
         "read_only": True,
         "leading_value": _u32(data, fmt.LEADING_VALUE_OFFSET),  # raw, meaning unconfirmed
         "footer_hex": data[-fmt.FOOTER_SIZE:].hex(),
+        "names_source": names.DATA_SOURCE,
     }
     if game is None:
         facts.note_unknown("source.game", f"unrecognized header magic {magic!r}")

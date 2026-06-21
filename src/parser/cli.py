@@ -21,6 +21,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("path", help="path to persistentgamedata{N}.dat")
     ap.add_argument("--raw", action="store_true",
                     help="include raw counter/achievement arrays")
+    ap.add_argument("--report", action="store_true",
+                    help="print a human-readable Save Report instead of JSON")
     args = ap.parse_args(argv)
 
     try:
@@ -28,6 +30,11 @@ def main(argv: list[str] | None = None) -> int:
     except (SaveParseError, OSError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
+
+    if args.report:
+        from ..report import render
+        print(render(facts.to_dict()))
+        return 0
 
     out = facts.to_dict()
     if not args.raw:

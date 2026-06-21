@@ -1,5 +1,38 @@
 # BUILDLOG
 
+## v1 — Rich facts + Save Report — 2026-06-21
+
+First real app surface, built on a real player save (Egi's Steam `250900` export:
+`rep+persistentgamedata1.dat`, slot 1). Parser-truth held throughout.
+
+### Real-save validation (the true STEP D)
+All three save slots parse clean (11/11 chunks, walk EOF-exact) across the
+638-achievement (Repentance, `rep_`) and 642-achievement (Repentance+, `rep+`)
+variants — the self-describing chunk walk adapted with zero hardcoded offsets.
+Slot 1 (the active save): 111/642 achievements, 8 deaths, 11 Mom kills, best
+streak 2, 388/733 items seen, 739 bestiary entries. Realistic, not maxed —
+proves the parser on genuine mid-progression data, not just the Dead God file.
+
+### chronicler.v0 → v1
+- **ID → name resolution** (`src/parser/names.py` + vendored
+  `src/parser/data/{achievements,collectibles}.json`, trimmed from
+  Zamiell/isaac-save-viewer public metadata). Verified `index == in-game ID`
+  against the real save (collectible 1 = "The Sad Onion", achievement 1 =
+  "Magdalene"). Unknown id → `Unknown_<id>` (never hidden/guessed).
+- `completion.unlocked` / `completion.locked` now carry real names; `locked`
+  includes the in-game unlock hint ("what's left + how to get it").
+- `collectibles.seen_items` lists seen items by name.
+- **Save Report** (`src/report.py`, `cli --report`): readable progress report
+  — completion bar, lifetime stats, collectibles, bestiary, a sample of what's
+  left with how-to hints, and the honest-nulls list.
+- Tests: 15 passed (added name-resolution, unknown-id honesty, report render).
+
+### Still null (logged, not guessed)
+Per-character completion marks; normal-vs-Greed donation split; bestiary
+category labels + monster names. Next foundation step before the companion.
+
+---
+
 ## v0 — The Chronicler (Parser Smoke Test) — 2026-06-21
 
 Stand up isaac-vera as its own repo and ship one thing: a verified `.dat` parser
