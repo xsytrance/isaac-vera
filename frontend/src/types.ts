@@ -62,7 +62,11 @@ export interface Facts {
     locked: LockedAchievement[];
   };
   stats: Record<string, number | null>;
-  collectibles: { total: number; seen: number };
+  collectibles: {
+    total: number;
+    seen: number;
+    items: { id: number; name: string; seen: boolean }[];
+  };
   bestiary: {
     parsed: boolean;
     total_entries: number;

@@ -110,6 +110,28 @@ export function BestiaryCard({ f }: { f: Facts }) {
   );
 }
 
+export function Collectibles({ f }: { f: Facts }) {
+  const c = f.collectibles;
+  const items = c.items ?? [];
+  if (!items.length) return null;
+  return (
+    <Panel title={`Collectibles · ${c.seen}/${c.total} seen`}>
+      <div className="muted small">
+        green = seen · dim = still to find ({items.filter((i) => !i.seen).length})
+      </div>
+      <div className="itemgrid">
+        {items.map((i) => (
+          <span
+            key={i.id}
+            className={`cell ${i.seen ? "seen" : ""}`}
+            title={`${i.name}${i.seen ? "" : " — not seen"}`}
+          />
+        ))}
+      </div>
+    </Panel>
+  );
+}
+
 export function WhatsNext({ f }: { f: Facts }) {
   const n = f.next;
   if (!n?.groups?.length) return null;
