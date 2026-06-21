@@ -17,8 +17,10 @@ from typing import Any, Optional
 
 from . import format as fmt
 from . import names
+from . import characters
+from . import priorities
 
-SCHEMA_VERSION = "chronicler.v1"
+SCHEMA_VERSION = "chronicler.v1.2"
 
 
 class SaveParseError(Exception):
@@ -44,6 +46,7 @@ class ChroniclerFacts:
     stats: dict = field(default_factory=dict)
     collectibles: dict = field(default_factory=dict)
     bestiary: dict = field(default_factory=dict)
+    next: dict = field(default_factory=dict)
     chunks: list = field(default_factory=list)
     raw: dict = field(default_factory=dict)
     unknowns: list = field(default_factory=list)
@@ -144,9 +147,13 @@ def _parse_achievements(data: bytes, chunk: Chunk, facts: ChroniclerFacts) -> No
              "unlock": names.achievement_unlock(i)}
             for i in real_locked
         ],
+        # Non-tainted character roster, derived from unlock achievements.
+        "characters": characters.roster(set(unlocked_idx)),
     }
     facts.note_unknown("completion.completion_marks",
-                       "per-character mark mapping not implemented in v1")
+                       "per-character mark mapping not implemented in v1.1")
+    facts.note_unknown("completion.characters.tainted",
+                       "tainted-character unlocks have no achievement; not trackable")
     facts.raw["achievements_locked_indices"] = locked
 
 
@@ -174,43 +181,59 @@ def _parse_bestiary(data: bytes, chunk: Chunk, facts: ChroniclerFacts) -> None:
                             f"pair region not 8-aligned (got {region} bytes)")
         return
 
-    categories: list[dict] = []
-    cur_count = 0
-    cur_value_sum = 0
-    prev_entity = -1
+    # Split the pair stream into categories at each entity-key reset.
+    cats: list[list[tuple[int, int]]] = [[]]
+    prev_key = -1
     o = pairs_start
     end = len(data) - fmt.FOOTER_SIZE
     total = 0
     while o + 8 <= end:
-        entity = _u32(data, o)
+        key = _u32(data, o)
         value = _u32(data, o + 4)
-        if entity < prev_entity:
-            categories.append({"entries": cur_count, "value_sum": cur_value_sum})
-            cur_count = 0
-            cur_value_sum = 0
-        prev_entity = entity
-        cur_count += 1
-        cur_value_sum += value
+        if key < prev_key:
+            cats.append([])
+        cats[-1].append((key, value))
+        prev_key = key
         total += 1
         o += 8
-    categories.append({"entries": cur_count, "value_sum": cur_value_sum})
+
+    labels = fmt.BESTIARY_CATEGORIES  # deaths, kills, hits, encounters (file order)
+    out_categories = []
+    for i, cat in enumerate(cats):
+        top = []
+        for key, value in sorted(cat, key=lambda kv: -kv[1])[:10]:
+            eid, variant = fmt.bestiary_entity(key)
+            top.append({
+                "id": eid, "variant": variant,
+                "name": names.entity_name(eid, variant),
+                "boss": names.entity_is_boss(eid, variant),
+                "value": value,
+            })
+        out_categories.append({
+            "label": labels[i] if i < len(labels) else None,
+            "entries": len(cat),
+            "value_sum": sum(v for _, v in cat),
+            "top": top,
+        })
 
     facts.bestiary = {
         "present": True,
         "parsed": True,
-        "category_count": len(categories),
-        "categories": categories,
+        "category_count": len(cats),
+        "category_labels": [c["label"] for c in out_categories],
+        "categories": out_categories,
         "total_entries": total,
-        # Which category is kills / encounters / hits / deaths is NOT confirmed,
-        # and entity-key -> monster-name mapping is deferred. Honest nulls:
-        "category_labels": None,
     }
-    facts.note_unknown("bestiary.category_labels",
-                       "kill/encounter/hit/death labelling unconfirmed in v1")
-    if len(categories) != chunk.count:
+    if len(cats) != chunk.count:
         facts.note_unknown(
             "bestiary.category_count",
-            f"detected {len(categories)} categories but chunk count={chunk.count}",
+            f"detected {len(cats)} categories but chunk count={chunk.count}",
+        )
+    if len(cats) != len(labels):
+        # Category->label alignment only holds for the standard 4-category layout.
+        facts.note_unknown(
+            "bestiary.category_labels",
+            f"expected {len(labels)} categories, found {len(cats)}; labels may be off",
         )
 
 
@@ -263,6 +286,9 @@ def parse_bytes(data: bytes, source_name: str = "<bytes>") -> ChroniclerFacts:
         _parse_collectibles(data, by_type[fmt.COLLECTIBLES], facts)
     if fmt.BESTIARY in by_type:
         _parse_bestiary(data, by_type[fmt.BESTIARY], facts)
+
+    # 'What's next' — group the locked achievements into actionable buckets.
+    facts.next = priorities.whats_next(facts.completion.get("locked", []))
 
     # Record any chunk types we did not reach (e.g. parser stopped early).
     reached = set(by_type)

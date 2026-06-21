@@ -52,3 +52,22 @@ def known_achievement(achievement_id: int) -> bool:
 
 def known_collectible(item_id: int) -> bool:
     return str(item_id) in _collectibles()
+
+
+@lru_cache(maxsize=1)
+def _entities() -> dict:
+    return json.loads((_DATA / "entities.json").read_text(encoding="utf-8"))
+
+
+@lru_cache(maxsize=1)
+def _boss_keys() -> frozenset:
+    return frozenset(_entities().get("bosses", []))
+
+
+def entity_name(entity_id: int, variant: int) -> str:
+    name = _entities().get("names", {}).get(f"{entity_id}:{variant}")
+    return name if name else f"Unknown_{entity_id}.{variant}"
+
+
+def entity_is_boss(entity_id: int, variant: int) -> bool:
+    return f"{entity_id}:{variant}" in _boss_keys()

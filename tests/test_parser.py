@@ -60,11 +60,12 @@ def build_synthetic_save() -> bytes:
     out += _chunk(fmt.GAME_SETTINGS, 2, struct.pack("<II", 0, 0))
     out += _chunk(fmt.SPECIAL_SEEDS, 2, bytes([0, 0]))
 
-    # BESTIARY: 2 categories (entity ascending, resets between categories).
-    # 8-byte sub-header + pairs. count field = number of categories.
+    # BESTIARY: 2 categories (entity keys ascending, reset between categories).
+    # Keys decode (id = (key>>20)&0xFFF): 0x00A00000 -> id 10 (Gaper),
+    # 0x00D00000 -> id 13 (Fly). 8-byte sub-header + pairs.
     bestiary_pairs = b""
     for cat in range(2):
-        for ent, val in [(0x00100000, 3 + cat), (0x00200000, 5 + cat)]:
+        for ent, val in [(0x00A00000, 3 + cat), (0x00D00000, 5 + cat)]:
             bestiary_pairs += struct.pack("<II", ent, val)
     bestiary_body = struct.pack("<II", 2, 99) + bestiary_pairs  # 8-byte sub-header
     out += struct.pack("<III", fmt.BESTIARY, len(bestiary_body), 2) + bestiary_body
@@ -77,7 +78,8 @@ def build_synthetic_save() -> bytes:
 
 def test_header_and_schema():
     facts = parse_bytes(build_synthetic_save(), "synthetic.dat")
-    assert facts.schema == SCHEMA_VERSION == "chronicler.v1"
+    assert facts.schema == SCHEMA_VERSION
+    assert SCHEMA_VERSION.startswith("chronicler.v")
     assert facts.source["header_magic"] == "ISAACNGSAVE09R"
     assert facts.source["game"] == "Repentance"
     assert facts.source["format_verified"] is True
@@ -113,19 +115,37 @@ def test_dead_god_completion():
     assert c["completion_marks"] is None      # honest null
 
 
+def test_character_roster():
+    facts = parse_bytes(build_synthetic_save(), "synthetic.dat")
+    chars = facts.completion["characters"]
+    # Synthetic save unlocks achievements 1..9 -> Magdalene(1), Cain(2), Judas(3),
+    # plus Isaac (default). The rest stay locked.
+    assert chars["tracked_total"] == 17
+    assert chars["unlocked_count"] == 4
+    assert set(chars["unlocked"]) == {"Isaac", "Magdalene", "Cain", "Judas"}
+    assert "Keeper" in chars["locked"] and "Bethany" in chars["locked"]
+    # 17 tainted characters are not derivable from achievements -> honest null.
+    assert chars["tainted"] is None
+
+
 def test_collectibles_counts():
     facts = parse_bytes(build_synthetic_save(), "synthetic.dat")
     assert facts.collectibles["total"] == 5
     assert facts.collectibles["seen"] == 3
 
 
-def test_bestiary_categories():
+def test_bestiary_categories_and_names():
     facts = parse_bytes(build_synthetic_save(), "synthetic.dat")
     b = facts.bestiary
     assert b["parsed"] is True
     assert b["category_count"] == 2
     assert b["total_entries"] == 4
-    assert b["category_labels"] is None       # honest null
+    # Labels come from the sourced file order (first 2 of deaths/kills/hits/enc).
+    assert b["category_labels"] == ["deaths", "kills"]
+    # Entity keys decode to real monster names: id 10 variant 0 = "Frowning
+    # Gaper" (variant 1 would be "Gaper"), id 13 variant 0 = "Fly".
+    top_names = {t["name"] for c in b["categories"] for t in c["top"]}
+    assert "Frowning Gaper" in top_names and "Fly" in top_names
 
 
 def test_unknowns_are_logged_not_guessed():
@@ -171,6 +191,35 @@ def test_report_renders_readable_text():
     assert "## Completion" in text
     assert "## Lifetime stats" in text
     assert "Magdalene" not in text or True  # sample list is bounded; just ensure no crash
+
+
+def test_whats_next_buckets():
+    from src.parser.priorities import whats_next
+    locked = [
+        {"id": 199, "name": "Lilith", "unlock": "Unlocked a new character."},
+        {"id": 500, "name": "A Challenge", "unlock": "Beat Challenge #5"},
+        {"id": 501, "name": "A Mark", "unlock": "Defeat Mom as Cain"},
+        {"id": 502, "name": "A Greed", "unlock": "Win in the Greed Donation room"},
+        {"id": 503, "name": "Misc", "unlock": "Something else entirely"},
+    ]
+    nxt = whats_next(locked)
+    groups = {g["group"]: g["count"] for g in nxt["groups"]}
+    assert groups == {"characters": 1, "challenges": 1, "greed_mode": 1,
+                      "boss_completion": 1, "other": 1}
+    # Headline points at the highest-priority non-empty group (characters first).
+    assert "Unlock characters" in nxt["headline"]
+
+
+def test_scan_folder(tmp_path):
+    from src.parser.slots import scan, most_progressed
+    (tmp_path / "rep+persistentgamedata1.dat").write_bytes(build_synthetic_save())
+    (tmp_path / "rep_persistentgamedata2.dat").write_bytes(b"GARBAGE" + b"\x00" * 40)
+    results = scan(str(tmp_path))
+    assert len(results) == 2
+    ok = [r for r in results if r["ok"]]
+    bad = [r for r in results if not r["ok"]]
+    assert len(ok) == 1 and len(bad) == 1  # bad save reported, not crashing
+    assert most_progressed(results)["file"] == "rep+persistentgamedata1.dat"
 
 
 def test_bad_magic_raises():

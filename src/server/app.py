@@ -1,42 +1,88 @@
-"""prime-as-brain: a single read-only service over one parsed save.
+"""prime-as-brain: a single read-only service + dashboard over one parsed save.
 
-Stdlib only (no deps). Holds the parsed chronicler facts and answers grounded
-questions via Ollama on prime. Routing is a pure function (`route`) so it can be
-unit-tested without a socket or a live model.
+Stdlib only (no deps, no build step). Holds the parsed chronicler facts, serves a
+self-contained dashboard, and answers grounded questions via Ollama on prime.
+Routing is a pure function (`route`) so it can be unit-tested without a socket or
+a live model.
 
-    python -m src.server.app save.dat --port 8765 [--host ...] [--model ...]
+    python -m src.server.app save.dat --port 8765 [--bind 0.0.0.0] [--host ...] [--model ...]
 
 Endpoints:
-    GET  /healthz  -> {ok, schema, model}
-    GET  /facts    -> chronicler.v1 facts (JSON)
-    GET  /report   -> human-readable Save Report (text)
-    POST /ask      -> {answer, model} from {question, history?}  (grounded)
+    GET  /          -> dashboard (HTML frontend; fetches /facts)
+    GET  /healthz   -> {ok, schema, model}
+    GET  /facts     -> chronicler facts (JSON)
+    GET  /report    -> human-readable Save Report (text)
+    POST /ask       -> {answer, model} from {question, history?}  (grounded)
 """
 from __future__ import annotations
 
 import argparse
 import json
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from pathlib import Path
 
 from ..parser.chronicler import parse_file, SCHEMA_VERSION
 from ..companion.companion import Companion
 from ..companion.ollama_client import OllamaClient, OllamaError
 from ..report import render
 
+from collections import namedtuple
+
+_DASHBOARD = Path(__file__).parent / "dashboard.html"
+# Built SPA (frontend/dist) lives at the repo root; gitignored, present after
+# `npm run build`. When present, it is served in preference to dashboard.html.
+_SPA_DIST = Path(__file__).resolve().parents[2] / "frontend" / "dist"
+
+_CTYPES = {".html": "text/html; charset=utf-8", ".js": "application/javascript",
+           ".css": "text/css", ".svg": "image/svg+xml", ".json": "application/json",
+           ".ico": "image/x-icon", ".woff2": "font/woff2", ".map": "application/json"}
+
+Static = namedtuple("Static", "content_type body")
+
+
+class Html(str):
+    """Marker so the handler serves a string as text/html (vs text/plain)."""
+
+
+def _load_spa(dist: Path) -> dict:
+    """Map url paths -> Static(content_type, bytes) for a built SPA, or {}."""
+    if not (dist / "index.html").is_file():
+        return {}
+    out: dict[str, Static] = {}
+    for f in dist.rglob("*"):
+        if f.is_file():
+            url = "/" + f.relative_to(dist).as_posix()
+            ct = _CTYPES.get(f.suffix, "application/octet-stream")
+            out[url] = Static(ct, f.read_bytes())
+    out["/"] = out["/index.html"]  # SPA entry
+    return out
+
 
 def make_state(path: str, host: str | None = None, model: str | None = None) -> dict:
     facts = parse_file(path).to_dict()
     companion = Companion(facts, client=OllamaClient(host=host, model=model))
-    return {"facts": facts, "report": render(facts), "companion": companion}
+    return {
+        "facts": facts,
+        "report": render(facts),
+        "companion": companion,
+        "dashboard": Html(_DASHBOARD.read_text(encoding="utf-8")),
+        "static": _load_spa(_SPA_DIST),
+    }
 
 
 def route(method: str, path: str, body: bytes, state: dict):
-    """Pure router: returns (status:int, payload). payload is a dict (-> JSON)
-    or str (-> text/plain). Never fabricates: a model failure becomes 503."""
+    """Pure router: returns (status:int, payload). payload is a dict (-> JSON),
+    an Html str (-> text/html), or a plain str (-> text/plain). Never fabricates:
+    a model failure becomes 503."""
     p = "/" + path.strip("/")
-    if method == "GET" and p in ("/", "/healthz"):
-        model = state["companion"].client.model
-        return 200, {"ok": True, "schema": SCHEMA_VERSION, "model": model}
+    static = state.get("static") or {}
+    if method == "GET" and p in static:          # built SPA asset (or its index)
+        return 200, static[p]
+    if method == "GET" and p in ("/", "/dashboard"):
+        return 200, static.get("/", state["dashboard"])
+    if method == "GET" and p == "/healthz":
+        return 200, {"ok": True, "schema": SCHEMA_VERSION,
+                     "model": state["companion"].client.model}
     if method == "GET" and p == "/facts":
         return 200, state["facts"]
     if method == "GET" and p == "/report":
@@ -55,13 +101,19 @@ def route(method: str, path: str, body: bytes, state: dict):
             return 503, {"error": str(exc)}
         return 200, {"answer": ans, "model": state["companion"].client.model}
     return 404, {"error": "not found",
-                 "endpoints": ["GET /facts", "GET /report", "POST /ask"]}
+                 "endpoints": ["GET /", "GET /facts", "GET /report", "POST /ask"]}
 
 
 def _build_handler(state: dict):
     class Handler(BaseHTTPRequestHandler):
         def _respond(self, status: int, payload) -> None:
-            if isinstance(payload, str):
+            if isinstance(payload, Static):
+                body = payload.body
+                ctype = payload.content_type
+            elif isinstance(payload, Html):
+                body = payload.encode("utf-8")
+                ctype = "text/html; charset=utf-8"
+            elif isinstance(payload, str):
                 body = payload.encode("utf-8")
                 ctype = "text/plain; charset=utf-8"
             else:
@@ -90,17 +142,19 @@ def _build_handler(state: dict):
 
 
 def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(description="Serve chronicler facts + Vera (read-only).")
+    ap = argparse.ArgumentParser(description="Serve the chronicler dashboard + Vera (read-only).")
     ap.add_argument("path", help="path to persistentgamedata{N}.dat")
     ap.add_argument("--port", type=int, default=8765)
+    ap.add_argument("--bind", default="127.0.0.1",
+                    help="bind address (use 0.0.0.0 to reach it over your tailnet)")
     ap.add_argument("--host", default=None, help="Ollama host (default: prime / $OLLAMA_HOST)")
     ap.add_argument("--model", default=None, help="Ollama model (default: $OLLAMA_MODEL or first installed)")
     args = ap.parse_args(argv)
 
     state = make_state(args.path, host=args.host, model=args.model)
-    httpd = HTTPServer(("127.0.0.1", args.port), _build_handler(state))
-    print(f"prime-as-brain on http://127.0.0.1:{args.port}  "
-          f"(GET /facts /report · POST /ask)")
+    httpd = HTTPServer((args.bind, args.port), _build_handler(state))
+    print(f"isaac-vera dashboard on http://{args.bind}:{args.port}/  "
+          f"(/ dashboard · /facts /report · POST /ask)")
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:

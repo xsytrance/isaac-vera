@@ -1,5 +1,76 @@
 # BUILDLOG
 
+## real frontend — React/Vite SPA — 2026-06-21
+
+`frontend/` is a proper Vite + React + TypeScript app (strict mode; `npm run
+build` → 148 KB, verified compiling here). Components: completion, character
+roster, stats, named bestiary, prioritized "what's next" (from `facts.next`),
+and an **Ask Vera** chat (POST `/ask`, honest on failure). Dev uses a Vite proxy
+to the prime-as-brain server; for prod, the Python server now **serves the built
+`frontend/dist`** at `/` (with correct content-types) and falls back to the
+zero-build `dashboard.html` when no build is present. node_modules / dist /
+*.tsbuildinfo are gitignored — source only. Server tests cover SPA-serving;
+35 passed, 1 skipped.
+
+## what's-next intelligence — 2026-06-21
+
+`src/parser/priorities.py` groups the locked achievements into impact-ordered
+buckets (characters → challenges → greed → boss-completions → donation → other),
+each with a count + concrete examples carrying their real unlock hints, plus a
+headline. Pure derivation over the real locked list — categorizes, never invents.
+Exposed at `facts.next`, shown in the Report and Vera's truth block. On the real
+save: 6 characters, 49 challenges, 52 greed, 270 boss-completions, 6 donation,
+147 other. Tests: 34 passed, 1 skipped.
+
+## frontend + multi-slot — 2026-06-21
+
+- **Dashboard frontend** (`src/server/dashboard.html`, served at `GET /`): a
+  self-contained, zero-build, no-deps page (vanilla JS + inline CSS, dark theme)
+  that fetches `/facts` and renders completion, character chips, lifetime stats,
+  named bestiary (most killed / encountered / killed-you-most), and a scrollable
+  "what's left". Also has an **Ask Vera** chat box (POST `/ask`) — so the one
+  page is the full A+B surface (dashboard + grounded companion). Server serves
+  `text/html` and takes `--bind` (use `0.0.0.0` to reach it over the tailnet).
+  Chat shows honest errors (e.g. prime unreachable) — never a fake answer.
+- **Multi-slot folder support** (`src/parser/slots.py`): point the CLI at a
+  Steam `remote/` folder and it parses every `*persistentgamedata*.dat`,
+  reporting a per-slot table (achv / Dead God / deaths / items / chars) and the
+  most-progressed slot. Bad files are reported, not crashed on. On the real
+  export: slot 1 active (111/642), slots 2 & 3 fresh.
+- Tests: 33 passed, 1 skipped (added dashboard-route + folder-scan tests).
+
+## v1.2 — bestiary names + category labels — 2026-06-21
+
+Resolved two long-standing nulls at once, both sourced and validated:
+- **Category labels** = `deaths, kills, hits, encounters` (file order from
+  Demorck `SaveManager.ts` `setBestiary`; corroborated by magnitudes — kills &
+  encounters dominate, deaths smallest).
+- **Monster names**: entity key decode `id = ((id2<<8)|id1) >> 4`,
+  `variant = byte+1` (Demorck), i.e. `id = (key>>20)&0xFFF`. Verified
+  `0x00A00000 → id 10 (Frowning Gaper)`; **99% of real-save entries resolve**
+  (735/739). Vendored 498 names + 134 boss flags (`data/entities.json`) from
+  Demorck `IEntity.ts`. Unknown → `Unknown_<id>.<variant>`.
+- Facts now expose, per category: `label`, `entries`, `value_sum`, and a named
+  `top` list (id/variant/name/boss/value). Report + Vera show "most killed /
+  encountered / killed you most". On the real save: most killed Spider (1,417),
+  Attack Fly (1,363); killed you most Spider, Gusher, Maw.
+- Schema → `chronicler.v1.2`; tests reference the constant now (no churn on
+  future bumps). 31 passed, 1 skipped.
+
+## v1.1.x — character roster — 2026-06-21
+
+Deepened the Chronicler (schema bump `chronicler.v1` → `chronicler.v1.1`):
+- `completion.characters` — the **17 non-tainted characters**, each resolved
+  from its unlock achievement (verified by id: Magdalene=1 … Bethany=404,
+  Jacob & Esau=405; Isaac=default). Surfaced in the Report and Vera's truth block.
+- The **17 tainted** characters unlock via Knife Pieces / Red Key with no
+  per-character achievement, so they are **not derivable** from this data →
+  reported as `null` ("not tracked"), never guessed.
+- On the real save: 11/17 non-tainted unlocked (locked: The Lost, Keeper,
+  Apollyon, The Forgotten, Bethany, Jacob & Esau). Tests: 31 passed, 1 skipped.
+- Bestiary monster names and per-character completion marks remain honest nulls
+  (no clean public source yet — documented in the roadmap backlog).
+
 ## v1.2 — prime-as-brain service — 2026-06-21
 
 Unified the pieces into one read-only service (`src/server/app.py`) so a single

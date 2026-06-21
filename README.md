@@ -9,15 +9,19 @@ This is **Spine 1** of the two-spine plan (see `MULTIVERA_ROADMAP.md`). Spine 2
 (the Commentator — a REPENTOGON live run feed, commentary, cinematics) is **not**
 built here.
 
-## Scope (v1)
+## Scope (chronicler.v1.2)
 - ✅ Parse Repentance / Repentance+ (`ISAACNGSAVE09R`) saves into facts.
-- ✅ Completion (achievements / Dead God), lifetime stats (deaths, kills, rocks,
-  donation, eden tokens, win streak), collectibles seen, bestiary counts.
-- ✅ **ID → name resolution** for achievements & collectibles; `locked`
-  achievements carry in-game unlock hints. Unknown id → `Unknown_<id>`.
-- ✅ **Save Report** (`--report`): human-readable progress + what's left.
+- ✅ Completion (achievements / Dead God), lifetime stats, collectibles, bestiary.
+- ✅ **ID → name resolution** for achievements, collectibles, and **bestiary
+  monsters** (with boss flags); `locked` achievements carry unlock hints.
+  Unknown id → `Unknown_<id>`.
+- ✅ **Character roster** (17 non-tainted, from unlock achievements).
+- ✅ **Bestiary** named per category (deaths / kills / hits / encounters) —
+  "most killed / encountered / killed you most".
+- ✅ **Save Report** (`--report`) and **Vera** (grounded companion).
 - ✅ Strictly read-only. No save editing, ever.
-- ❌ No LLM companion yet (next), no live feed (Spine 2).
+- ⬜ Honest nulls: per-character completion marks, tainted unlocks, Greed-donation
+  split (see roadmap).
 
 ## Usage
 ```bash
@@ -28,13 +32,34 @@ python3 -m src.parser.cli path/to/persistentgamedata1.dat --report
 python3 -m src.parser.cli path/to/persistentgamedata1.dat
 python3 -m src.parser.cli path/to/save.dat --raw   # include raw arrays
 
-# Or run the prime-as-brain service (stdlib only, no deps):
-#   GET /facts · GET /report · POST /ask · GET /healthz
-python3 -m src.server.app path/to/save.dat --port 8765
+# Multi-slot: point at a whole Steam remote/ folder
+python3 -m src.parser.cli /path/to/userdata/250900/remote/
+
+# Run the prime-as-brain service + dashboard frontend (stdlib only, no deps):
+#   GET /  dashboard · GET /facts · GET /report · POST /ask · GET /healthz
+python3 -m src.server.app path/to/save.dat --port 8765 --bind 0.0.0.0
+#   then open http://<this-box>:8765/ in a browser
 curl localhost:8765/facts
-curl localhost:8765/report
 curl -X POST localhost:8765/ask -d '{"question":"how close am I to Dead God?"}'
 ```
+
+### Frontend
+
+Two options, both talking to the same server:
+
+**React/Vite SPA** (`frontend/`) — the full app: completion, character roster,
+stats, named bestiary, prioritized "what's next", and the Ask Vera chat.
+```bash
+cd frontend
+npm install
+npm run dev        # dev server on :5173, proxies /facts /ask to :8765
+# — or build it and let the Python server serve it (one command in prod):
+npm run build      # -> frontend/dist
+python3 -m src.server.app save.dat --bind 0.0.0.0   # serves the built SPA at /
+```
+When `frontend/dist` exists the server serves the SPA at `/`; otherwise it falls
+back to a **zero-build dashboard** (`src/server/dashboard.html`) — same content,
+no toolchain. Use `--bind 0.0.0.0` to open it from another device on your tailnet.
 
 ### Vera — grounded companion (Ollama)
 Ask questions about your save; answers are grounded strictly in parsed facts
